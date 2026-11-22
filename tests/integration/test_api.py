@@ -8,9 +8,9 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from ecommerce_platform.api.dependencies import get_recommendation_service
-from ecommerce_platform.infrastructure.llm import MockLLMProvider
-from ecommerce_platform.services.recommendation_service import RecommendationService
+from agentic_commerce_platform.api.dependencies import get_recommendation_service
+from agentic_commerce_platform.infrastructure.llm import MockLLMProvider
+from agentic_commerce_platform.services.recommendation_service import RecommendationService
 
 
 def test_health_endpoint(client: TestClient) -> None:
@@ -20,7 +20,7 @@ def test_health_endpoint(client: TestClient) -> None:
     assert response.status_code == 200
     assert response.json() == {
         "status": "healthy",
-        "app_name": "multi-agent-ecommerce-platform",
+        "app_name": "agentic-commerce-platform",
         "version": "0.1.0",
         "environment": "test",
     }

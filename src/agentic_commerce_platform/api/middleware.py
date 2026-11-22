@@ -10,7 +10,7 @@ from uuid import uuid4
 
 from fastapi import FastAPI, Request, Response
 
-from ecommerce_platform.infrastructure.observability.logging import request_log_context
+from agentic_commerce_platform.infrastructure.observability.logging import request_log_context
 
 __all__ = ["get_request_id", "install_request_middleware", "resolve_request_id"]
 

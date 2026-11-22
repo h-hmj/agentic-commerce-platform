@@ -1,7 +1,7 @@
 # 阶段一验收记录
 
-- 验收日期：2026-11-21
-- 项目：`multi-agent-ecommerce-platform`
+- 验收日期：2026-11-22
+- 项目：`agentic-commerce-platform`
 - 阶段：阶段一（工程骨架与基础设施）
 - 操作系统：Windows
 - 验证用 Python：3.12.0（满足 `>=3.11`）
@@ -10,7 +10,7 @@
 
 阶段一代码、单元测试、API 集成测试和真实 HTTP 启动冒烟测试均已完成。
 
-**实际测试结果：`67 passed, 1 warning in 0.40s`。**
+**实际测试结果：`67 passed, 1 warning in 0.47s`。**
 
 唯一 warning 来自第三方 FastAPI/Starlette TestClient 对当前 `httpx` 版本的弃用提示，
 不是本项目测试失败，不影响功能。项目并未因此使用真实网络或外部服务。
@@ -32,7 +32,7 @@
   ...: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
     from starlette.testclient import TestClient as TestClient  # noqa
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-67 passed, 1 warning in 0.40s
+67 passed, 1 warning in 0.47s
 ```
 
 等价的标准命令为：
@@ -48,13 +48,13 @@ pytest -q
 ### 2.2 启动
 
 ```powershell
-.\.venv\Scripts\python.exe -m uvicorn ecommerce_platform.api.app:app --host 127.0.0.1 --port 8765
+.\.venv\Scripts\python.exe -m uvicorn agentic_commerce_platform.api.app:app --host 127.0.0.1 --port 8765
 ```
 
 实际启动日志：
 
 ```text
-... | INFO | ecommerce_platform.api.app | application_initialized | request_id=- agent_name=-
+... | INFO | agentic_commerce_platform.api.app | application_initialized | request_id=- agent_name=-
 INFO:     Started server process [...]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
@@ -68,7 +68,7 @@ GET /health
 HTTP/1.1 200 OK
 x-request-id: 93707b905df748eb974cb49ae16d3524
 
-{"status":"healthy","app_name":"multi-agent-ecommerce-platform","version":"0.1.0","environment":"development"}
+{"status":"healthy","app_name":"agentic-commerce-platform","version":"0.1.0","environment":"development"}
 ```
 
 ### 2.4 推荐接口实际响应
@@ -149,12 +149,12 @@ x-request-id: 6d869e54d12d4c25806c9439903fd773
 推荐请求的部分服务端日志：
 
 ```text
-... | INFO | ecommerce_platform.api.middleware | http_request_started | request_id=live-smoke-1 agent_name=- ...
-... | INFO | ecommerce_platform.services.recommendation_service | recommendation_started | request_id=live-smoke-1 agent_name=demo_agent scene=home num_items=3
-... | INFO | ecommerce_platform.agents.base | agent_started | request_id=live-smoke-1 agent_name=demo_agent attempt=1
-... | INFO | ecommerce_platform.agents.base | agent_completed | request_id=live-smoke-1 agent_name=demo_agent duration_ms=0.18 attempt=1
-... | INFO | ecommerce_platform.services.recommendation_service | recommendation_completed | request_id=live-smoke-1 agent_name=demo_agent duration_ms=0.52
-... | INFO | ecommerce_platform.api.middleware | http_request_succeeded | request_id=live-smoke-1 agent_name=- ... status_code=200 duration_ms=3.24
+... | INFO | agentic_commerce_platform.api.middleware | http_request_started | request_id=live-smoke-1 agent_name=- ...
+... | INFO | agentic_commerce_platform.services.recommendation_service | recommendation_started | request_id=live-smoke-1 agent_name=demo_agent scene=home num_items=3
+... | INFO | agentic_commerce_platform.agents.base | agent_started | request_id=live-smoke-1 agent_name=demo_agent attempt=1
+... | INFO | agentic_commerce_platform.agents.base | agent_completed | request_id=live-smoke-1 agent_name=demo_agent duration_ms=0.18 attempt=1
+... | INFO | agentic_commerce_platform.services.recommendation_service | recommendation_completed | request_id=live-smoke-1 agent_name=demo_agent duration_ms=0.52
+... | INFO | agentic_commerce_platform.api.middleware | http_request_succeeded | request_id=live-smoke-1 agent_name=- ... status_code=200 duration_ms=3.24
 ```
 
 日志中没有 API Key、Prompt、完整用户上下文或请求体。

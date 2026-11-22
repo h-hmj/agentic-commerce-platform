@@ -7,7 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from ecommerce_platform.domain.enums import RecommendationScene, RecommendationStatus
+from agentic_commerce_platform.domain.enums import RecommendationScene, RecommendationStatus
 
 __all__ = [
     "AgentResult",

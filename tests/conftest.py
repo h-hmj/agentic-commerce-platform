@@ -8,8 +8,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from ecommerce_platform.api.app import create_app
-from ecommerce_platform.settings import Settings
+from agentic_commerce_platform.api.app import create_app
+from agentic_commerce_platform.settings import Settings
 
 SETTINGS_ENVIRONMENT_KEYS = (
     "APP_NAME",
@@ -39,7 +39,7 @@ def test_settings() -> Settings:
     """Return explicit test settings that require no external services."""
     return Settings(
         _env_file=None,
-        app_name="multi-agent-ecommerce-platform",
+        app_name="agentic-commerce-platform",
         app_version="0.1.0",
         app_env="test",
         debug=False,

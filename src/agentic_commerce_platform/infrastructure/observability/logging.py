@@ -18,8 +18,8 @@ from typing import Any, TextIO
 
 __all__ = ["agent_log_context", "configure_logging", "request_log_context"]
 
-_PACKAGE_LOGGER_NAME = "ecommerce_platform"
-_HANDLER_MARKER = "_ecommerce_platform_handler"
+_PACKAGE_LOGGER_NAME = "agentic_commerce_platform"
+_HANDLER_MARKER = "_agentic_commerce_platform_handler"
 _REQUEST_ID_FIELD = "request_id"
 _AGENT_NAME_FIELD = "agent_name"
 _EXTRA_FIELDS = (

@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from ecommerce_platform.settings import (
+from agentic_commerce_platform.settings import (
     AppEnvironment,
     LogFormat,
     LogLevel,
@@ -21,7 +21,7 @@ def test_development_defaults_require_no_external_configuration(
     """Defaults are usable offline and contain no secret material."""
     settings = Settings(_env_file=None)
 
-    assert settings.app_name == "multi-agent-ecommerce-platform"
+    assert settings.app_name == "agentic-commerce-platform"
     assert settings.app_version == "0.1.0"
     assert settings.app_env is AppEnvironment.DEVELOPMENT
     assert settings.debug is False

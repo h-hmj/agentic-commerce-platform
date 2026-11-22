@@ -8,9 +8,9 @@ import time
 from abc import ABC, abstractmethod
 from typing import Any
 
-from ecommerce_platform.domain.errors import EcommercePlatformError
-from ecommerce_platform.domain.models import AgentResult
-from ecommerce_platform.infrastructure.observability.logging import agent_log_context
+from agentic_commerce_platform.domain.errors import EcommercePlatformError
+from agentic_commerce_platform.domain.models import AgentResult
+from agentic_commerce_platform.infrastructure.observability.logging import agent_log_context
 
 __all__ = ["BaseAgent"]
 

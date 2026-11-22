@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import TypedDict
 
-from ecommerce_platform.domain.models import AgentResult, Product
+from agentic_commerce_platform.domain.models import AgentResult, Product
 
 __all__ = ["RecommendationState"]
 

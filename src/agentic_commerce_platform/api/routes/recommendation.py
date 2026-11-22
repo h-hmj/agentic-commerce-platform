@@ -6,14 +6,14 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
 
-from ecommerce_platform.api.dependencies import get_recommendation_service
-from ecommerce_platform.api.middleware import get_request_id
-from ecommerce_platform.domain.models import (
+from agentic_commerce_platform.api.dependencies import get_recommendation_service
+from agentic_commerce_platform.api.middleware import get_request_id
+from agentic_commerce_platform.domain.models import (
     ErrorResponse,
     RecommendationRequest,
     RecommendationResponse,
 )
-from ecommerce_platform.services.recommendation_service import RecommendationService
+from agentic_commerce_platform.services.recommendation_service import RecommendationService
 
 __all__ = ["router"]
 

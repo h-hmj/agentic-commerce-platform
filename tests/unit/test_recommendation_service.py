@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import pytest
 
-from ecommerce_platform.domain.enums import RecommendationScene, RecommendationStatus
-from ecommerce_platform.domain.errors import AgentExecutionError
-from ecommerce_platform.domain.models import RecommendationRequest
-from ecommerce_platform.infrastructure.llm import MockLLMProvider
-from ecommerce_platform.services.recommendation_service import RecommendationService
+from agentic_commerce_platform.domain.enums import RecommendationScene, RecommendationStatus
+from agentic_commerce_platform.domain.errors import AgentExecutionError
+from agentic_commerce_platform.domain.models import RecommendationRequest
+from agentic_commerce_platform.infrastructure.llm import MockLLMProvider
+from agentic_commerce_platform.services.recommendation_service import RecommendationService
 
 
 async def test_service_returns_explicit_skeleton_response() -> None:
@@ -73,8 +73,8 @@ async def test_service_rejects_injected_failed_agent_result() -> None:
     """A structurally failed agent result is not silently returned as success."""
     from typing import Any
 
-    from ecommerce_platform.agents.base import BaseAgent
-    from ecommerce_platform.domain.models import AgentResult
+    from agentic_commerce_platform.agents.base import BaseAgent
+    from agentic_commerce_platform.domain.models import AgentResult
 
     class StructurallyFailingAgent(BaseAgent):
         def __init__(self) -> None:

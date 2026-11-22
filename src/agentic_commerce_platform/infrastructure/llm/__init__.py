@@ -1,12 +1,12 @@
 """LLM provider abstraction, offline mock, and provider composition."""
 
-from ecommerce_platform.domain.errors import ConfigurationError
-from ecommerce_platform.infrastructure.llm.base import LLMProvider
-from ecommerce_platform.infrastructure.llm.mock_provider import (
+from agentic_commerce_platform.domain.errors import ConfigurationError
+from agentic_commerce_platform.infrastructure.llm.base import LLMProvider
+from agentic_commerce_platform.infrastructure.llm.mock_provider import (
     DEFAULT_MOCK_RESPONSE,
     MockLLMProvider,
 )
-from ecommerce_platform.settings import Settings
+from agentic_commerce_platform.settings import Settings
 
 __all__ = [
     "DEFAULT_MOCK_RESPONSE",

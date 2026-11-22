@@ -2,7 +2,7 @@
 
 ## 1. 范围
 
-本文描述 `multi-agent-ecommerce-platform` 阶段一的工程骨架。阶段一的目标不是实现
+本文描述 `agentic-commerce-platform` 阶段一的工程骨架。阶段一的目标不是实现
 推荐业务，而是建立可运行、可测试、可扩展的分层基础，使后续 Agent、LangGraph、
 RAG、记忆和可观测性能力可以在稳定边界上逐步接入。
 
@@ -151,11 +151,11 @@ EcommercePlatformError
 
 ## 8. 日志与可观测性
 
-使用标准库 `logging`，通过 `configure_logging()` 统一配置 `ecommerce_platform`
+使用标准库 `logging`，通过 `configure_logging()` 统一配置 `agentic_commerce_platform`
 命名空间。默认控制台格式：
 
 ```text
-2026-11-21T... | INFO | ecommerce_platform.agents.base | agent_completed | request_id=... agent_name=demo_agent duration_ms=0.18 attempt=1
+2026-11-21T... | INFO | agentic_commerce_platform.agents.base | agent_completed | request_id=... agent_name=demo_agent duration_ms=0.18 attempt=1
 ```
 
 `LOG_FORMAT=json` 时输出单行 JSON，可平滑接入后续日志采集。每条记录保证包含：

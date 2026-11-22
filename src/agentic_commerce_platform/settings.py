@@ -8,7 +8,7 @@ from functools import lru_cache
 from pydantic import Field, HttpUrl, SecretStr, ValidationError, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from ecommerce_platform.domain.errors import ConfigurationError
+from agentic_commerce_platform.domain.errors import ConfigurationError
 
 __all__ = [
     "AppEnvironment",
@@ -62,7 +62,7 @@ class Settings(BaseSettings):
     )
 
     app_name: str = Field(
-        default="multi-agent-ecommerce-platform",
+        default="agentic-commerce-platform",
         min_length=1,
         max_length=100,
         description="Human-readable application name.",

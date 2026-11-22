@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from fastapi import Request
 
-from ecommerce_platform.domain.errors import ConfigurationError
-from ecommerce_platform.services.recommendation_service import RecommendationService
-from ecommerce_platform.settings import Settings
+from agentic_commerce_platform.domain.errors import ConfigurationError
+from agentic_commerce_platform.services.recommendation_service import RecommendationService
+from agentic_commerce_platform.settings import Settings
 
 __all__ = ["get_app_settings", "get_recommendation_service"]
 

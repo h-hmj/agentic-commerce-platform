@@ -7,8 +7,8 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, Field
 
-from ecommerce_platform.api.dependencies import get_app_settings
-from ecommerce_platform.settings import Settings
+from agentic_commerce_platform.api.dependencies import get_app_settings
+from agentic_commerce_platform.settings import Settings
 
 __all__ = ["HealthResponse", "router"]
 

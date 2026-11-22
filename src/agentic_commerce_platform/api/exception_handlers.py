@@ -9,14 +9,14 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from ecommerce_platform.api.middleware import get_request_id
-from ecommerce_platform.domain.errors import (
+from agentic_commerce_platform.api.middleware import get_request_id
+from agentic_commerce_platform.domain.errors import (
     AgentExecutionError,
     ConfigurationError,
     EcommercePlatformError,
     ExternalServiceError,
 )
-from ecommerce_platform.domain.models import ErrorDetail, ErrorResponse
+from agentic_commerce_platform.domain.models import ErrorDetail, ErrorResponse
 
 __all__ = ["register_exception_handlers"]
 

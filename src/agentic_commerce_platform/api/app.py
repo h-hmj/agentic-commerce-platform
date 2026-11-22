@@ -6,14 +6,14 @@ import logging
 
 from fastapi import FastAPI
 
-from ecommerce_platform.agents.demo import DemoAgent
-from ecommerce_platform.api.exception_handlers import register_exception_handlers
-from ecommerce_platform.api.middleware import install_request_middleware
-from ecommerce_platform.api.routes import health, recommendation
-from ecommerce_platform.infrastructure.llm import build_llm_provider
-from ecommerce_platform.infrastructure.observability.logging import configure_logging
-from ecommerce_platform.services.recommendation_service import RecommendationService
-from ecommerce_platform.settings import Settings, get_settings
+from agentic_commerce_platform.agents.demo import DemoAgent
+from agentic_commerce_platform.api.exception_handlers import register_exception_handlers
+from agentic_commerce_platform.api.middleware import install_request_middleware
+from agentic_commerce_platform.api.routes import health, recommendation
+from agentic_commerce_platform.infrastructure.llm import build_llm_provider
+from agentic_commerce_platform.infrastructure.observability.logging import configure_logging
+from agentic_commerce_platform.services.recommendation_service import RecommendationService
+from agentic_commerce_platform.settings import Settings, get_settings
 
 __all__ = ["app", "create_app"]
 

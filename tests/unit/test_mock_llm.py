@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from ecommerce_platform.domain.errors import ExternalServiceError
-from ecommerce_platform.infrastructure.llm import (
+from agentic_commerce_platform.domain.errors import ExternalServiceError
+from agentic_commerce_platform.infrastructure.llm import (
     DEFAULT_MOCK_RESPONSE,
     LLMProvider,
     MockLLMProvider,

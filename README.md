@@ -1,4 +1,4 @@
-# multi-agent-ecommerce-platform
+# agentic-commerce-platform
 
 一个面向真实工程能力学习与求职展示的多 Agent 电商平台。本仓库当前只完成
 **阶段一：工程骨架与基础设施**，不包含真实商品推荐、真实大模型调用或完整多 Agent
@@ -62,13 +62,13 @@
 ## 目录结构
 
 ```text
-multi-agent-ecommerce-platform/
+agentic-commerce-platform/
 ├── README.md
 ├── pyproject.toml
 ├── .env.example
 ├── .gitignore
 ├── src/
-│   └── ecommerce_platform/
+│   └── agentic_commerce_platform/
 │       ├── __init__.py
 │       ├── settings.py
 │       ├── api/
@@ -140,7 +140,7 @@ multi-agent-ecommerce-platform/
 ## 安装
 
 ```powershell
-cd multi-agent-ecommerce-platform
+cd agentic-commerce-platform
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
@@ -150,7 +150,7 @@ pip install -e ".[dev]"
 POSIX shell：
 
 ```bash
-cd multi-agent-ecommerce-platform
+cd agentic-commerce-platform
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
@@ -177,7 +177,7 @@ cp .env.example .env
 
 | 变量 | 默认值 | 说明 |
 | --- | --- | --- |
-| `APP_NAME` | `multi-agent-ecommerce-platform` | 应用名称，健康检查返回 |
+| `APP_NAME` | `agentic-commerce-platform` | 应用名称，健康检查返回 |
 | `APP_VERSION` | `0.1.0` | 应用版本 |
 | `APP_ENV` | `development` | `development` / `test` / `production` |
 | `DEBUG` | `false` | 生产环境必须为 `false` |
@@ -196,13 +196,13 @@ cp .env.example .env
 ## 启动
 
 ```bash
-uvicorn ecommerce_platform.api.app:app --host 127.0.0.1 --port 8000 --reload
+uvicorn agentic_commerce_platform.api.app:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 也可以使用模块方式：
 
 ```bash
-python -m uvicorn ecommerce_platform.api.app:app --reload
+python -m uvicorn agentic_commerce_platform.api.app:app --reload
 ```
 
 启动后可访问：
@@ -222,7 +222,7 @@ curl http://127.0.0.1:8000/health
 ```json
 {
   "status": "healthy",
-  "app_name": "multi-agent-ecommerce-platform",
+  "app_name": "agentic-commerce-platform",
   "version": "0.1.0",
   "environment": "development"
 }
@@ -339,7 +339,7 @@ python -m pytest -q
 - `/health`、`/api/v1/recommend`、422、稳定错误结构、404。
 - 全程不访问外部网络，不需要 API Key、Redis、数据库或向量数据库。
 
-本机实际执行结果：**67 passed, 1 warning in 0.40s**。唯一 warning 是第三方
+本机实际执行结果：**67 passed, 1 warning in 0.47s**。唯一 warning 是第三方
 FastAPI/Starlette TestClient 对当前 `httpx` 版本的弃用提示，不是测试失败。
 完整记录（含网络受限下的依赖安装说明）见
 [阶段一验收文档](docs/phase-1-acceptance.md)。

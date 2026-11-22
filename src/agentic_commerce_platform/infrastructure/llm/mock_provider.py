@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ecommerce_platform.domain.errors import ExternalServiceError
+from agentic_commerce_platform.domain.errors import ExternalServiceError
 
 __all__ = ["DEFAULT_MOCK_RESPONSE", "MockLLMProvider"]
 

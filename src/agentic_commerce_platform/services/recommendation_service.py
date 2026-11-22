@@ -6,13 +6,13 @@ import logging
 import time
 from uuid import uuid4
 
-from ecommerce_platform.agents.base import BaseAgent
-from ecommerce_platform.agents.demo import DemoAgent
-from ecommerce_platform.domain.enums import RecommendationStatus
-from ecommerce_platform.domain.errors import AgentExecutionError
-from ecommerce_platform.domain.models import RecommendationRequest, RecommendationResponse
-from ecommerce_platform.infrastructure.llm.base import LLMProvider
-from ecommerce_platform.infrastructure.observability.logging import request_log_context
+from agentic_commerce_platform.agents.base import BaseAgent
+from agentic_commerce_platform.agents.demo import DemoAgent
+from agentic_commerce_platform.domain.enums import RecommendationStatus
+from agentic_commerce_platform.domain.errors import AgentExecutionError
+from agentic_commerce_platform.domain.models import RecommendationRequest, RecommendationResponse
+from agentic_commerce_platform.infrastructure.llm.base import LLMProvider
+from agentic_commerce_platform.infrastructure.observability.logging import request_log_context
 
 __all__ = ["RecommendationService"]
 

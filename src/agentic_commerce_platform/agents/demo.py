@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from ecommerce_platform.agents.base import BaseAgent
-from ecommerce_platform.domain.models import AgentResult, RecommendationRequest
-from ecommerce_platform.infrastructure.llm.base import LLMProvider
+from agentic_commerce_platform.agents.base import BaseAgent
+from agentic_commerce_platform.domain.models import AgentResult, RecommendationRequest
+from agentic_commerce_platform.infrastructure.llm.base import LLMProvider
 
 __all__ = ["DemoAgent"]
 

@@ -7,8 +7,8 @@ from decimal import Decimal
 import pytest
 from pydantic import ValidationError
 
-from ecommerce_platform.domain.enums import RecommendationScene, RecommendationStatus
-from ecommerce_platform.domain.models import (
+from agentic_commerce_platform.domain.enums import RecommendationScene, RecommendationStatus
+from agentic_commerce_platform.domain.models import (
     AgentResult,
     ErrorDetail,
     ErrorResponse,

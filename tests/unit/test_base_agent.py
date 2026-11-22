@@ -7,8 +7,8 @@ from typing import Any
 
 import pytest
 
-from ecommerce_platform.agents.base import BaseAgent
-from ecommerce_platform.domain.models import AgentResult
+from agentic_commerce_platform.agents.base import BaseAgent
+from agentic_commerce_platform.domain.models import AgentResult
 
 
 class SuccessfulAgent(BaseAgent):

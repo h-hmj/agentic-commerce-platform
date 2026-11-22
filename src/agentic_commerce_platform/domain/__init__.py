@@ -1,13 +1,13 @@
 """Domain models, enums, and project-level exceptions."""
 
-from ecommerce_platform.domain.enums import RecommendationScene, RecommendationStatus
-from ecommerce_platform.domain.errors import (
+from agentic_commerce_platform.domain.enums import RecommendationScene, RecommendationStatus
+from agentic_commerce_platform.domain.errors import (
     AgentExecutionError,
     ConfigurationError,
     EcommercePlatformError,
     ExternalServiceError,
 )
-from ecommerce_platform.domain.models import (
+from agentic_commerce_platform.domain.models import (
     AgentResult,
     ErrorDetail,
     ErrorResponse,
