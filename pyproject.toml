@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "agentic-commerce-platform"
 version = "0.1.0"
-description = "Phase-one engineering skeleton for a multi-agent e-commerce platform."
+description = "Multi-agent e-commerce platform with independent phase-two professional agents."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

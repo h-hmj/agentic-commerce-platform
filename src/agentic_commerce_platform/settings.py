@@ -105,7 +105,7 @@ class Settings(BaseSettings):
         default="mock",
         min_length=1,
         max_length=32,
-        description="LLM provider identifier. Phase one supports only mock.",
+        description="LLM provider identifier. Phase two supports only mock.",
     )
     llm_api_key: SecretStr = Field(
         default_factory=lambda: SecretStr(""),
@@ -113,7 +113,7 @@ class Settings(BaseSettings):
     )
     llm_base_url: HttpUrl | None = Field(
         default=None,
-        description="Optional provider base URL. Empty in phase one.",
+        description="Optional provider base URL. Empty in phase two.",
     )
     llm_model: str = Field(
         default="mock-llm-v1",
@@ -160,11 +160,11 @@ class Settings(BaseSettings):
     @field_validator("llm_provider")
     @classmethod
     def validate_llm_provider(cls, value: str) -> str:
-        """Only allow providers implemented in phase one."""
+        """Only allow providers implemented in the current phase."""
         normalized = value.strip().lower()
         if normalized != "mock":
             raise ValueError(
-                "phase one supports only the 'mock' LLM provider; "
+                "the current phase supports only the 'mock' LLM provider; "
                 f"got {normalized!r}"
             )
         return normalized

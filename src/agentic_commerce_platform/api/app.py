@@ -20,9 +20,9 @@ __all__ = ["app", "create_app"]
 logger = logging.getLogger(__name__)
 
 _APP_DESCRIPTION = (
-    "Phase-one engineering skeleton for a multi-agent e-commerce platform. "
-    "The recommendation endpoint is a demonstration only: it uses an offline "
-    "mock LLM and returns no real product recommendations."
+    "Multi-agent e-commerce platform. Phase-two professional agents are available "
+    "as independent services; the public recommendation endpoint remains a "
+    "phase-one skeleton using an offline mock LLM and returning no real products."
 )
 
 

@@ -1,5 +1,9 @@
 # 阶段一验收记录
 
+> **历史验收记录**：本文件记录阶段一完成时的结果。阶段二已经在其基础上新增五个
+> 独立专业 Agent；阶段一 API 和原有测试仍保持兼容。阶段二说明见
+> [phase-2-architecture.md](phase-2-architecture.md)。
+
 - 验收日期：2026-11-22
 - 项目：`agentic-commerce-platform`
 - 阶段：阶段一（工程骨架与基础设施）

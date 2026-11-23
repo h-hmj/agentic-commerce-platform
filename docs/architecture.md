@@ -1,5 +1,9 @@
 # 阶段一架构说明
 
+> **历史文档说明**：本文描述阶段一的工程骨架。阶段二已经新增五个可独立运行的
+> 专业 Agent、内存数据适配器和新 Service，但尚未接入 Supervisor 或 LangGraph。
+> 阶段二实现请阅读 [phase-2-architecture.md](phase-2-architecture.md)。
+
 ## 1. 范围
 
 本文描述 `agentic-commerce-platform` 阶段一的工程骨架。阶段一的目标不是实现

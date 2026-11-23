@@ -19,9 +19,9 @@ __all__ = [
 def build_llm_provider(settings: Settings) -> LLMProvider:
     """Build the configured LLM provider.
 
-    Phase one deliberately supports only the offline mock adapter. Adding a
-    real adapter later should happen in this function or a dedicated factory,
-    keeping call sites provider-agnostic.
+    The current phase deliberately supports only the offline mock adapter.
+    Adding a real adapter later should happen in this function or a dedicated
+    factory, keeping call sites provider-agnostic.
 
     Args:
         settings: Validated application settings.

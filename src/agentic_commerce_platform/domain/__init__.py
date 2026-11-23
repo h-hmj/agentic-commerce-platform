@@ -1,6 +1,29 @@
-"""Domain models, enums, and project-level exceptions."""
+"""Domain models, ports, enums, and project-level exceptions."""
 
-from agentic_commerce_platform.domain.enums import RecommendationScene, RecommendationStatus
+from agentic_commerce_platform.domain.agent_models import (
+    CatalogInput,
+    CatalogOutput,
+    InventoryInput,
+    InventoryOutput,
+    MarketingInput,
+    MarketingOutput,
+    RecommendationInput,
+    RecommendationOutput,
+    UserBehaviorRecord,
+    UserProfileInput,
+    UserProfileOutput,
+)
+from agentic_commerce_platform.domain.enums import (
+    DataSource,
+    MarketingProvider,
+    MarketingStyle,
+    ProfileSource,
+    RecommendationReasonCode,
+    RecommendationScene,
+    RecommendationStatus,
+    RecommendationStrategy,
+    UserSegment,
+)
 from agentic_commerce_platform.domain.errors import (
     AgentExecutionError,
     ConfigurationError,
@@ -16,19 +39,45 @@ from agentic_commerce_platform.domain.models import (
     RecommendationRequest,
     RecommendationResponse,
 )
+from agentic_commerce_platform.domain.ports import (
+    CatalogRepository,
+    InventoryRepository,
+    UserBehaviorRepository,
+)
 
 __all__ = [
     "AgentExecutionError",
     "AgentResult",
+    "CatalogInput",
+    "CatalogOutput",
+    "CatalogRepository",
     "ConfigurationError",
+    "DataSource",
     "EcommercePlatformError",
     "ErrorDetail",
     "ErrorResponse",
     "ExternalServiceError",
+    "InventoryInput",
+    "InventoryOutput",
+    "InventoryRepository",
+    "MarketingInput",
+    "MarketingOutput",
+    "MarketingProvider",
+    "MarketingStyle",
     "Product",
+    "ProfileSource",
     "RecommendationContext",
+    "RecommendationInput",
+    "RecommendationOutput",
+    "RecommendationReasonCode",
     "RecommendationRequest",
     "RecommendationResponse",
     "RecommendationScene",
     "RecommendationStatus",
+    "RecommendationStrategy",
+    "UserBehaviorRecord",
+    "UserBehaviorRepository",
+    "UserProfileInput",
+    "UserProfileOutput",
+    "UserSegment",
 ]
