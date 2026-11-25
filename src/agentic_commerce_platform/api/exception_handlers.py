@@ -17,6 +17,7 @@ from agentic_commerce_platform.domain.errors import (
     ExternalServiceError,
 )
 from agentic_commerce_platform.domain.models import ErrorDetail, ErrorResponse
+from agentic_commerce_platform.orchestration.errors import WorkflowExecutionError
 
 __all__ = ["register_exception_handlers"]
 
@@ -40,6 +41,12 @@ _PLATFORM_ERROR_SPECS: tuple[tuple[type[EcommercePlatformError], int, str, str],
         503,
         "external_service_error",
         "外部服务暂时不可用，请稍后重试。",
+    ),
+    (
+        WorkflowExecutionError,
+        500,
+        "workflow_execution_error",
+        "推荐工作流执行失败，请稍后重试。",
     ),
     (
         EcommercePlatformError,

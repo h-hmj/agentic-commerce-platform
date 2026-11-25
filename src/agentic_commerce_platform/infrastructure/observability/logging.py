@@ -31,6 +31,9 @@ _EXTRA_FIELDS = (
     "error_code",
     "scene",
     "num_items",
+    "workflow_status",
+    "current_node",
+    "final_product_count",
 )
 _SUPPORTED_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
 _SUPPORTED_FORMATS = {"console", "json"}

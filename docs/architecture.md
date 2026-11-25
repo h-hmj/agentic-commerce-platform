@@ -1,8 +1,9 @@
 # 阶段一架构说明
 
-> **历史文档说明**：本文描述阶段一的工程骨架。阶段二已经新增五个可独立运行的
-> 专业 Agent、内存数据适配器和新 Service，但尚未接入 Supervisor 或 LangGraph。
-> 阶段二实现请阅读 [phase-2-architecture.md](phase-2-architecture.md)。
+> **历史文档说明**：本文描述阶段一的工程骨架。阶段二新增五个独立专业 Agent，阶段三
+> 已通过 LangGraph Supervisor 完成多 Agent 编排。阶段二实现见
+> [phase-2-architecture.md](phase-2-architecture.md)，阶段三实现见
+> [phase-3-architecture.md](phase-3-architecture.md)。
 
 ## 1. 范围
 

@@ -1,5 +1,9 @@
 # 阶段二架构说明：专业 Agent 的独立设计与实现
 
+> **历史阶段文档说明**：阶段三已经在阶段二基础上实现 LangGraph Supervisor 工作流。
+> 本文保留阶段二“单 Agent 独立设计与测试”的边界说明；当前多 Agent 编排请阅读
+> [phase-3-architecture.md](phase-3-architecture.md)。
+
 ## 1. 范围与边界
 
 阶段二在阶段一基础设施之上新增五个可独立运行的专业 Agent：

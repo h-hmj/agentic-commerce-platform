@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "agentic-commerce-platform"
 version = "0.1.0"
-description = "Multi-agent e-commerce platform with independent phase-two professional agents."
+description = "Multi-agent e-commerce platform with a LangGraph-based Supervisor workflow."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -13,6 +13,7 @@ dependencies = [
     "uvicorn>=0.30,<1.0",
     "pydantic>=2.8,<3.0",
     "pydantic-settings>=2.4,<3.0",
+    "langgraph>=1.2,<2.0",
 ]
 
 [project.optional-dependencies]

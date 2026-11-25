@@ -12,6 +12,7 @@ __all__ = [
     "RecommendationStatus",
     "RecommendationStrategy",
     "UserSegment",
+    "WorkflowStatus",
 ]
 
 
@@ -33,6 +34,16 @@ class RecommendationStatus(StrEnum):
 
     SKELETON = "skeleton"
     SUCCESS = "success"
+    PARTIAL_SUCCESS = "partial_success"
+    FAILED = "failed"
+
+
+class WorkflowStatus(StrEnum):
+    """Lifecycle status of the phase-three multi-agent workflow."""
+
+    RUNNING = "running"
+    SUCCESS = "success"
+    PARTIAL_SUCCESS = "partial_success"
     FAILED = "failed"
 
 
