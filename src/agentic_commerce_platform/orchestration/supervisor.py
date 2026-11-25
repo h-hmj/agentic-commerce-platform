@@ -37,6 +37,7 @@ from agentic_commerce_platform.orchestration.nodes import WorkflowNodes
 from agentic_commerce_platform.orchestration.state import (
     RecommendationWorkflowState,
     build_initial_workflow_state,
+    merge_unique_strings,
 )
 from agentic_commerce_platform.settings import Settings
 
@@ -157,10 +158,22 @@ class SupervisorOrchestrator:
                     "num_items": request.num_items,
                 },
             )
+            last_state: RecommendationWorkflowState = initial_state
             try:
-                final_state = await self._graph.ainvoke(initial_state)
-                if not isinstance(final_state, dict):
-                    raise TypeError("LangGraph workflow returned a non-dict state")
+                # Stream full state snapshots instead of only awaiting a final
+                # dict. If a graph-level exception occurs, the most recent
+                # successful snapshot still contains prior nodes' agent results,
+                # errors, warnings, and any products produced before the crash.
+                async for snapshot in self._graph.astream(
+                    initial_state,
+                    stream_mode="values",
+                ):
+                    if not isinstance(snapshot, dict):
+                        raise TypeError(
+                            "LangGraph workflow yielded a non-dict state snapshot"
+                        )
+                    last_state = cast(RecommendationWorkflowState, snapshot)
+                final_state = last_state
             except Exception:
                 self._logger.exception(
                     "workflow_execution_failed",
@@ -170,6 +183,7 @@ class SupervisorOrchestrator:
                     request,
                     effective_request_id,
                     started_at,
+                    previous_state=last_state,
                 )
             final_status = _status_value(final_state.get("workflow_status"))
             final_count = len(final_state.get("available_products", []))
@@ -241,30 +255,43 @@ class SupervisorOrchestrator:
         request: RecommendationRequest,
         request_id: str,
         started_at: float,
+        *,
+        previous_state: RecommendationWorkflowState | None = None,
     ) -> RecommendationWorkflowState:
-        """Build a safe failed state when graph execution itself raises."""
+        """Preserve the last successful graph snapshot on a graph-level failure."""
         now = datetime.now(UTC).isoformat(timespec="milliseconds")
-        return RecommendationWorkflowState(
-            request_id=request_id,
-            user_id=request.user_id,
-            scene=request.scene.value,
-            num_items=request.num_items,
-            context=request.context,
-            current_node="workflow",
-            workflow_status=WorkflowStatus.FAILED,
-            failed_stage="workflow",
-            started_at=now,
-            completed_at=now,
-            total_latency_ms=(time.perf_counter() - started_at) * 1000.0,
-            final_product_count=0,
-            agent_results={},
-            available_products=[],
-            unavailable_products=[],
-            inventory_alerts=[],
-            marketing_copies=[],
-            errors=["workflow_execution_failed"],
-            warnings=[],
+        preserved = dict(previous_state or {})
+        products = list(preserved.get("available_products", []))
+        workflow_status = (
+            WorkflowStatus.PARTIAL_SUCCESS if products else WorkflowStatus.FAILED
         )
+        preserved.update(
+            {
+                "request_id": request_id,
+                "user_id": request.user_id,
+                "scene": request.scene.value,
+                "num_items": request.num_items,
+                "context": request.context,
+                "current_node": "workflow",
+                "workflow_status": workflow_status,
+                "failed_stage": "workflow",
+                "started_at": preserved.get("started_at") or now,
+                "completed_at": now,
+                "total_latency_ms": (time.perf_counter() - started_at) * 1000.0,
+                "final_product_count": len(products),
+                "agent_results": preserved.get("agent_results", {}),
+                "available_products": products,
+                "unavailable_products": preserved.get("unavailable_products", []),
+                "inventory_alerts": preserved.get("inventory_alerts", []),
+                "marketing_copies": preserved.get("marketing_copies", []),
+                "errors": merge_unique_strings(
+                    preserved.get("errors", []),
+                    ["workflow_execution_failed"],
+                ),
+                "warnings": preserved.get("warnings", []),
+            }
+        )
+        return RecommendationWorkflowState(**preserved)
 
 
 def _workflow_status(value: WorkflowStatus | str | None) -> WorkflowStatus:

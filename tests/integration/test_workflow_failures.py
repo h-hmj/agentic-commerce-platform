@@ -6,6 +6,9 @@ from agentic_commerce_platform.domain.enums import (
     RecommendationStatus,
     WorkflowStatus,
 )
+from agentic_commerce_platform.orchestration.graph import (
+    build_recommendation_graph,
+)
 from tests.workflow_helpers import (
     FixedResultAgent,
     agent_result,
@@ -148,18 +151,33 @@ async def test_invalid_agent_output_is_not_trusted(test_settings) -> None:
     assert response.agent_results["catalog_agent"].success is True
 
 
-async def test_unknown_workflow_exception_returns_safe_failed_state(
+async def test_unknown_workflow_exception_preserves_intermediate_results(
     test_settings,
     monkeypatch,
 ) -> None:
-    """Unexpected graph exceptions become a failed response without a stack."""
+    """Unexpected graph exceptions retain the last streamed successful state."""
     supervisor = make_supervisor(test_settings)
+    profile_result = agent_result(
+        "user_profile_agent",
+        success=False,
+        error="profile unavailable",
+    )
 
-    class BrokenGraph:
-        async def ainvoke(self, state):
+    class FailingGraphAfterProgress:
+        async def astream(self, state, stream_mode="values"):
+            snapshot = dict(state)
+            snapshot.update(
+                {
+                    "agent_results": {"user_profile_agent": profile_result},
+                    "errors": ["user_profile_agent_failed"],
+                    "warnings": ["user_profile_fallback_default"],
+                    "current_node": "catalog",
+                }
+            )
+            yield snapshot
             raise RuntimeError("unexpected graph crash")
 
-    monkeypatch.setattr(supervisor, "_graph", BrokenGraph())
+    monkeypatch.setattr(supervisor, "_graph", FailingGraphAfterProgress())
 
     response = await supervisor.run(
         make_request(query="python"),
@@ -170,9 +188,44 @@ async def test_unknown_workflow_exception_returns_safe_failed_state(
     assert response.workflow_status is WorkflowStatus.FAILED
     assert response.status is RecommendationStatus.FAILED
     assert response.products == []
-    assert response.errors == ["workflow_execution_failed"]
-    assert response.agent_results == {}
+    assert response.errors == [
+        "user_profile_agent_failed",
+        "workflow_execution_failed",
+    ]
+    assert "user_profile_fallback_default" in response.warnings
+    assert response.agent_results["user_profile_agent"].success is False
     assert "unexpected graph crash" not in " ".join(response.errors)
+
+
+async def test_real_langgraph_node_crash_preserves_parallel_results(
+    test_settings,
+    monkeypatch,
+) -> None:
+    """A real compiled graph crash retains profile/catalog results streamed before it."""
+    supervisor = make_supervisor(test_settings)
+
+    async def explode(state):
+        raise RuntimeError("node exploded after parallel work")
+
+    monkeypatch.setattr(supervisor._nodes, "recommendation_node", explode)
+    monkeypatch.setattr(
+        supervisor,
+        "_graph",
+        build_recommendation_graph(supervisor._nodes),
+    )
+
+    response = await supervisor.run(
+        make_request(query="python"),
+        request_id="real-graph-crash-1",
+    )
+
+    assert response.workflow_status is WorkflowStatus.FAILED
+    assert set(response.agent_results) == {
+        "user_profile_agent",
+        "catalog_agent",
+    }
+    assert response.errors == ["workflow_execution_failed"]
+    assert "node exploded after parallel work" not in " ".join(response.errors)
 
 
 async def test_empty_catalog_is_partial_not_a_crash(test_settings) -> None:

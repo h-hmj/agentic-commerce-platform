@@ -63,7 +63,7 @@
   - 最终响应聚合。
 - 三个内存 Repository 和集中演示数据。
 - 阶段一 skeleton API 继续兼容。
-- 202 个测试通过。
+- 203 个测试通过。
 
 ## 阶段三架构
 
@@ -199,7 +199,7 @@ Agent 间没有直接调用，也没有全局通信；数据全部通过 LangGra
 | InventoryAgent | available 为空，记录 error，跳过营销，不假设有货 |
 | MarketingAgent | 保留商品和库存结果，文案为空，记录 error |
 | 输出 Pydantic 校验失败 | 记录 `*_output_invalid`，不信任 AgentResult.data |
-| 图级未知异常 | 返回 `workflow_execution_failed`，完整堆栈只进日志 |
+| 图级未知异常 | 通过 LangGraph 状态流保留最后成功快照的 `agent_results`/`errors`/`warnings`，追加 `workflow_execution_failed`，完整堆栈只进日志 |
 
 状态区分：
 
@@ -497,11 +497,11 @@ tests/regression/test_phase1_phase2_compatibility.py
 当前实际结果：
 
 ```text
-202 passed, 1 warning in 2.28s
+203 passed, 1 warning in 2.91s
 ```
 
 唯一 warning 是第三方 FastAPI/Starlette TestClient 对 httpx 的弃用提示，不是项目
-测试失败。阶段一/二原有 149 个测试继续通过；阶段三新增 53 个测试。
+测试失败。阶段一/二原有 149 个测试继续通过；阶段三新增 54 个测试。
 
 ## 设计决策
 

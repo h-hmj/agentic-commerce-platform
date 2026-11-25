@@ -96,8 +96,10 @@ Supervisor 的职责：
 
 1. 创建带 request ID 的初始工作流状态。
 2. 用五个注入 Agent 构建 `WorkflowNodes`，再构建并编译 LangGraph。
-3. 在 request 日志上下文中执行 `graph.ainvoke()`。
-4. 捕获图级未知异常，生成安全失败状态。
+3. 在 request 日志上下文中执行 `graph.astream(..., stream_mode="values")`，逐步保留
+   完整状态快照。
+4. 捕获图级未知异常，用最后成功快照恢复并保留
+   `agent_results`/`errors`/`warnings`，再生成安全失败状态。
 5. 将最终状态转换为 `WorkflowRecommendationResponse`。
 6. 保证最终 products 与 marketing copies 一致性。
 
@@ -246,7 +248,7 @@ aggregate
 | InventoryAgent | 可售列表为空，写 error，跳过营销 | failed，不假设库存充足 |
 | MarketingAgent | 保留已完成商品，文案为空，写 error | partial_success |
 | Agent 输出模型校验失败 | 记录 `*_output_invalid`，不信任 data | 按对应 Agent 失败策略 |
-| 图级未知异常 | Supervisor 捕获，返回 `workflow_execution_failed` | failed，日志保留堆栈 |
+| 图级未知异常 | Supervisor 通过 `astream` 的最后成功快照保留 `agent_results`/`errors`/`warnings`，追加 `workflow_execution_failed` | 无最终商品为 failed；已有商品则 partial_success；日志保留堆栈 |
 
 空候选集与失败不同：
 
