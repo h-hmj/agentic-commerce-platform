@@ -33,6 +33,19 @@ def test_development_defaults_require_no_external_configuration(
     assert settings.llm_api_key.get_secret_value() == ""
     assert settings.llm_base_url is None
     assert settings.llm_model == "mock-llm-v1"
+    assert settings.database_url == "sqlite:///./data/agentic_commerce.db"
+    assert settings.use_real_adapters is False
+    assert settings.seed_demo_data is True
+    assert settings.redis_enabled is False
+    assert settings.redis_key_prefix == "agentic-commerce"
+    assert settings.redis_url.get_secret_value() == "redis://localhost:6379/0"
+    assert "redis://localhost" not in repr(settings)
+    assert settings.embedding_provider == "deterministic"
+    assert settings.embedding_model == "deterministic-hash-v1"
+    assert settings.embedding_dimensions == 64
+    assert settings.vector_store_type == "local"
+    assert settings.retrieval_top_k == 8
+    assert settings.retrieval_score_threshold == 0.05
 
 
 def test_environment_variables_are_loaded_and_secret_is_masked(
@@ -105,6 +118,13 @@ def test_dotenv_file_is_supported(
         ({"app_env": "production", "debug": True}, "debug"),
         ({"log_level": "verbose"}, "log_level"),
         ({"log_format": "xml"}, "log_format"),
+        ({"database_url": ""}, "database_url"),
+        ({"database_url": "mongodb://localhost/db"}, "database_url"),
+        ({"embedding_provider": "openai"}, "embedding_provider"),
+        ({"embedding_dimensions": 1}, "embedding_dimensions"),
+        ({"retrieval_top_k": 0}, "retrieval_top_k"),
+        ({"retrieval_score_threshold": 1.1}, "retrieval_score_threshold"),
+        ({"vector_store_type": "remote"}, "vector_store_type"),
     ],
 )
 def test_invalid_settings_are_rejected(

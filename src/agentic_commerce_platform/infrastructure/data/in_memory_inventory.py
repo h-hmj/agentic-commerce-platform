@@ -51,3 +51,16 @@ class InMemoryInventoryRepository:
     def get_stock(self, product_id: str) -> int | None:
         """Return the current stock for a product, or ``None`` if unknown."""
         return self._stocks.get(product_id)
+
+    def get_stock_levels(self, product_ids: list[str]) -> dict[str, int | None]:
+        """Return current stock values for a batch of products."""
+        return {product_id: self._stocks.get(product_id) for product_id in product_ids}
+
+    def update_stock(self, product_id: str, stock: int) -> int:
+        """Update in-memory stock after validating a non-negative integer."""
+        if not product_id.strip():
+            raise ValueError("inventory product IDs must not be blank")
+        if isinstance(stock, bool) or not isinstance(stock, int) or stock < 0:
+            raise ValueError("inventory stock must be a non-negative integer")
+        self._stocks[product_id] = stock
+        return stock

@@ -8,6 +8,7 @@ must not be interpreted as real production e-commerce data.
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import Any
 
 from pydantic import Field, field_validator, model_validator
 
@@ -186,6 +187,15 @@ class UserProfileOutput(PlatformModel):
     confidence: float = Field(ge=0.0, le=1.0)
     profile_source: ProfileSource
     data_source: DataSource
+    memory_source: str | None = Field(
+        default=None,
+        max_length=32,
+        description="Where recent behavior came from: redis, database, or in_memory.",
+    )
+    profile_persisted: bool = Field(
+        default=False,
+        description="Whether this profile was persisted to long-term storage.",
+    )
     explanation: str | None = Field(default=None, max_length=1200)
     warnings: list[str] = Field(default_factory=list, max_length=20)
 
@@ -254,6 +264,23 @@ class CatalogOutput(PlatformModel):
     query: str
     filters: CatalogFilters
     source: DataSource
+    retrieval_source: str | None = Field(
+        default=None,
+        max_length=64,
+        description="vector, database_keyword, in_memory, or fallback.",
+    )
+    retrieval_scores: dict[str, float] = Field(
+        default_factory=dict,
+        description="Semantic retrieval scores by product ID, when available.",
+    )
+    retrieval_metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Safe retrieval metadata such as embedding model and top_k.",
+    )
+    warnings: list[str] = Field(
+        default_factory=list,
+        description="Non-fatal retrieval degradation warnings.",
+    )
 
 
 class RankingReason(PlatformModel):
@@ -269,6 +296,10 @@ class RecommendationInput(PlatformModel):
     user_profile: UserProfileOutput
     candidate_products: list[Product] = Field(default_factory=list, max_length=200)
     num_items: int = Field(default=5, ge=1, le=50)
+    retrieval_scores: dict[str, float] = Field(
+        default_factory=dict,
+        description="Optional semantic scores used only as an explainable tie-breaker.",
+    )
 
 
 class RecommendationOutput(PlatformModel):

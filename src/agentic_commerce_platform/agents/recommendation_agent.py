@@ -20,7 +20,7 @@ from agentic_commerce_platform.infrastructure.llm.base import LLMProvider
 
 __all__ = ["RecommendationAgent"]
 
-_MAX_SCORE = 70
+_MAX_SCORE = 80
 _MAX_PER_CATEGORY = 2
 _DIVERSITY_BONUS = 5
 
@@ -158,6 +158,16 @@ class RecommendationAgent(BaseAgent):
                 RankingReason(
                     code=RecommendationReasonCode.TAG_MATCH,
                     message=f"matches interests via tags: {', '.join(matched_tags)}",
+                )
+            )
+
+        semantic_score = request.retrieval_scores.get(product.product_id, 0.0)
+        if semantic_score > 0:
+            score += max(1, round(semantic_score * 10))
+            reasons.append(
+                RankingReason(
+                    code=RecommendationReasonCode.SEMANTIC_MATCH,
+                    message=f"semantic retrieval score {semantic_score:.3f}",
                 )
             )
 

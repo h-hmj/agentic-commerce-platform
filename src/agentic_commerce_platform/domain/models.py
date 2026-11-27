@@ -128,6 +128,22 @@ class Product(PlatformModel):
         max_length=100,
         description="Product category.",
     )
+    description: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=2000,
+        description="Optional product description used by RAG indexing.",
+    )
+    brand: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=100,
+        description="Optional product brand.",
+    )
+    is_active: bool = Field(
+        default=True,
+        description="Inactive products must not be returned by retrieval.",
+    )
     price: Decimal = Field(
         ge=Decimal("0"),
         max_digits=12,

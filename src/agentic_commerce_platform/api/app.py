@@ -3,31 +3,22 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from agentic_commerce_platform.agents.catalog_agent import CatalogAgent
 from agentic_commerce_platform.agents.demo import DemoAgent
-from agentic_commerce_platform.agents.inventory_agent import InventoryAgent
-from agentic_commerce_platform.agents.marketing_agent import MarketingAgent
-from agentic_commerce_platform.agents.profile_agent import UserProfileAgent
-from agentic_commerce_platform.agents.recommendation_agent import RecommendationAgent
+from agentic_commerce_platform.api.composition import (
+    Phase4Resources,
+    build_phase4_resources,
+)
 from agentic_commerce_platform.api.exception_handlers import register_exception_handlers
 from agentic_commerce_platform.api.middleware import install_request_middleware
-from agentic_commerce_platform.api.routes import health, recommendation
-from agentic_commerce_platform.infrastructure.data import (
-    InMemoryCatalogRepository,
-    InMemoryInventoryRepository,
-    InMemoryUserBehaviorRepository,
-)
+from agentic_commerce_platform.api.routes import catalog, health, recommendation, retrieval, users
 from agentic_commerce_platform.infrastructure.llm import build_llm_provider
 from agentic_commerce_platform.infrastructure.observability.logging import configure_logging
-from agentic_commerce_platform.orchestration.supervisor import (
-    SupervisorOrchestrator,
-    WorkflowRepositories,
-)
 from agentic_commerce_platform.services.recommendation_service import RecommendationService
-from agentic_commerce_platform.services.workflow_service import WorkflowService
 from agentic_commerce_platform.settings import Settings, get_settings
 
 __all__ = ["app", "create_app"]
@@ -35,81 +26,68 @@ __all__ = ["app", "create_app"]
 logger = logging.getLogger(__name__)
 
 _APP_DESCRIPTION = (
-    "Multi-agent e-commerce platform. The phase-three workflow runs five "
-    "professional agents through LangGraph using phase-2 in-memory demo data and "
-    "an offline MockLLMProvider. The original recommendation endpoint remains a "
-    "phase-one skeleton; the workflow endpoint is explicitly a demo."
+    "Multi-agent e-commerce platform with SQLite persistence, optional Redis "
+    "memory, deterministic local RAG, and a LangGraph Supervisor workflow. "
+    "The phase-one recommendation endpoint remains a compatibility skeleton; "
+    "the workflow and phase-four endpoints expose explicit demo/real data sources."
 )
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
-    """Build a FastAPI application with explicit dependency composition.
-
-    Args:
-        settings: Optional settings injection for tests and embedding. When
-            omitted, cached environment settings are loaded.
-
-    Returns:
-        A fully configured FastAPI application.
-    """
+    """Build a FastAPI application with explicit adapter composition."""
     resolved_settings = settings if settings is not None else get_settings()
     configure_logging(
         resolved_settings.log_level.value,
         resolved_settings.log_format.value,
     )
 
+    llm_provider = build_llm_provider(resolved_settings)
+    resources: Phase4Resources = build_phase4_resources(
+        resolved_settings,
+        llm_provider,
+    )
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        """Yield the app, then release memory/database resources."""
+        yield
+        try:
+            await resources.memory_store.close()
+        except Exception:
+            logger.warning("memory_store_shutdown_failed", exc_info=True)
+        if resources.database is not None:
+            resources.database.dispose()
+
     application = FastAPI(
         title=resolved_settings.app_name,
         version=resolved_settings.app_version,
         description=_APP_DESCRIPTION,
-        # Never let the framework emit debug tracebacks to API clients, even if
-        # the DEBUG setting is enabled for a local development workflow.
         debug=False,
+        lifespan=lifespan,
     )
     application.state.settings = resolved_settings
 
-    llm_provider = build_llm_provider(resolved_settings)
-
-    # Phase-one API remains available for compatibility.
+    # Phase-one endpoint remains unchanged.
     demo_agent = DemoAgent(llm_provider)
     application.state.recommendation_service = RecommendationService(
         llm_provider,
         agent=demo_agent,
     )
 
-    # Phase-three composition root: every professional agent is explicitly
-    # constructed and injected into the Supervisor. No hidden global agents exist.
-    behavior_repository = InMemoryUserBehaviorRepository()
-    catalog_repository = InMemoryCatalogRepository()
-    inventory_repository = InMemoryInventoryRepository()
-
-    profile_agent = UserProfileAgent(behavior_repository, llm_provider)
-    catalog_agent = CatalogAgent(catalog_repository, llm_provider)
-    recommendation_agent = RecommendationAgent(llm_provider)
-    inventory_agent = InventoryAgent(inventory_repository, llm_provider)
-    marketing_agent = MarketingAgent(llm_provider)
-
-    supervisor = SupervisorOrchestrator(
-        profile_agent=profile_agent,
-        catalog_agent=catalog_agent,
-        recommendation_agent=recommendation_agent,
-        inventory_agent=inventory_agent,
-        marketing_agent=marketing_agent,
-        repositories=WorkflowRepositories(
-            user_behavior=behavior_repository,
-            catalog=catalog_repository,
-            inventory=inventory_repository,
-        ),
-        llm_provider=llm_provider,
-        settings=resolved_settings,
-        logger_instance=logger,
-    )
-    application.state.workflow_service = WorkflowService(supervisor)
+    application.state.phase4_resources = resources
+    application.state.workflow_service = resources.workflow_service
+    application.state.catalog_service = resources.catalog_service
+    application.state.profile_service = resources.profile_service
+    application.state.memory_service = resources.memory_service
+    application.state.retrieval_service = resources.retrieval_service
 
     register_exception_handlers(application)
     install_request_middleware(application)
     application.include_router(health.router)
     application.include_router(recommendation.router, prefix="/api/v1")
+    application.include_router(catalog.router, prefix="/api/v1")
+    application.include_router(users.router, prefix="/api/v1")
+    application.include_router(retrieval.router, prefix="/api/v1")
 
     logger.info("application_initialized")
     return application

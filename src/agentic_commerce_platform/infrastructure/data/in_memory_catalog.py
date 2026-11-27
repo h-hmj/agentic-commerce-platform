@@ -48,6 +48,8 @@ class InMemoryCatalogRepository:
         category: str | None = None,
         min_price: Decimal | None = None,
         max_price: Decimal | None = None,
+        limit: int | None = None,
+        active_only: bool = True,
     ) -> list[Product]:
         """Return products matching every supplied filter.
 
@@ -70,8 +72,16 @@ class InMemoryCatalogRepository:
 
         matches: list[Product] = []
         for product in self._products:
+            if active_only and not product.is_active:
+                continue
             searchable = " ".join(
-                [product.name, product.category, *product.tags]
+                [
+                    product.name,
+                    product.category,
+                    product.brand or "",
+                    product.description or "",
+                    *product.tags,
+                ]
             ).lower()
             if tokens and not all(token in searchable for token in tokens):
                 continue
@@ -84,4 +94,15 @@ class InMemoryCatalogRepository:
             matches.append(product)
 
         matches.sort(key=lambda product: product.product_id)
+        if limit is not None:
+            matches = matches[:limit]
         return [product.model_copy(deep=True) for product in matches]
+
+    def get_by_ids(self, product_ids: list[str]) -> list[Product]:
+        """Return active products matching the supplied IDs."""
+        wanted = set(product_ids)
+        return [
+            product.model_copy(deep=True)
+            for product in self._products
+            if product.product_id in wanted and product.is_active
+        ]

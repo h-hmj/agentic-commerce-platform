@@ -39,6 +39,9 @@ class WorkflowRecommendationResponse(PlatformModel):
     warnings: list[str] = Field(default_factory=list)
     total_latency_ms: float = Field(ge=0.0)
     data_source: DataSource = DataSource.IN_MEMORY_DEMO
+    retrieval_source: str | None = Field(default=None, max_length=64)
+    embedding_provider: str | None = Field(default=None, max_length=100)
+    memory_source: str | None = Field(default=None, max_length=32)
     llm_provider: str = Field(default="mock", min_length=1, max_length=32)
     messages: list[str] = Field(default_factory=list)
 

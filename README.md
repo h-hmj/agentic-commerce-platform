@@ -5,20 +5,28 @@
 - **阶段一：工程骨架与基础设施**
 - **阶段二：专业 Agent 的独立设计与实现**
 - **阶段三：Supervisor、多 Agent 协作与 LangGraph 工作流**
+- **阶段四：真实数据检索、RAG、用户画像持久化与记忆**
 
 阶段三通过 **真实编译的 LangGraph StateGraph** 将五个专业 Agent 串成可执行流程，
-并由 `SupervisorOrchestrator` 负责依赖注入、执行、错误降级和响应聚合。
+并由 `SupervisorOrchestrator` 负责依赖注入、执行、错误降级和响应聚合。阶段四在
+保持该拓扑不变的前提下加入 SQLite/SQLAlchemy 持久化、Redis/InMemory 记忆、确定性
+本地 Embedding、向量检索和画像持久化。
 
 > **重要边界**
 >
-> - 阶段三使用 phase-2 in-memory demo data，不是真实商品/库存/用户数据。
+> - 默认 `USE_REAL_ADAPTERS=false`，测试使用 in-memory 适配器；打开后使用 SQLite。
+> - SQLite 初始数据是明确标记的演示数据，不是真实生产商品/库存/用户数据。
 > - 当前只使用离线 `MockLLMProvider`，没有真实 LLM 调用。
 > - `POST /api/v1/recommend` 仍保留阶段一 skeleton 行为，用于兼容。
 > - 阶段三工作流接口是 `POST /api/v1/workflow/recommend`。
-> - 没有 Redis、MySQL、PostgreSQL、Milvus、Qdrant、Kafka 或 Prometheus。
-> - 没有 Embedding、RAG、真实支付/订单/WMS、Human-in-the-loop。
-> - 没有 Checkpoint 持久化、多轮会话记忆或生产级分布式部署。
+> - Redis 适配器已实现，但本机没有可用 Redis 服务；离线测试使用假客户端和
+>   `InMemoryMemoryStore`。Redis 不可用时显式降级，不伪造写入成功。
+> - 本地 RAG 使用确定性哈希 Embedding 和进程内/SQLite 向量索引，不是生产语义检索。
+> - 没有真实支付/订单/WMS、Human-in-the-loop、完整 Agent 评估平台或分布式部署。
 > - MarketingAgent 只做基础敏感词检查，不声称完成完整广告法审查。
+>
+> 详细设计、数据优先级和未验证项见
+> [阶段四架构](docs/phase-4-architecture.md)。
 
 ## 阶段目标
 
@@ -62,8 +70,41 @@
   - Supervisor 依赖注入与图执行。
   - 最终响应聚合。
 - 三个内存 Repository 和集中演示数据。
+- 阶段四 SQLAlchemy 2.x 数据层：商品、库存、用户、行为、画像、向量表。
+- Redis/InMemory 记忆适配器、确定性 Embedding、本地向量索引和 RAG。
+- 画像持久化、缓存、实时行为优先级与降级警告。
 - 阶段一 skeleton API 继续兼容。
-- 203 个测试通过。
+- 全部测试通过；具体数量见 [阶段四验收](docs/phase-4-acceptance.md)。
+
+## 阶段四快速开始
+
+```bash
+# 1. 安装依赖
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+
+# 2. 可选：复制配置并启用 SQLite 真实适配器
+Copy-Item .env.example .env
+# 编辑 .env: USE_REAL_ADAPTERS=true
+
+# 3. 应用数据库迁移
+.\.venv\Scripts\python.exe -m alembic upgrade head
+
+# 4. 启动（必须使用虚拟环境解释器，避免全局 uvicorn）
+.\.venv\Scripts\python.exe -m uvicorn agentic_commerce_platform.api.app:app --host 127.0.0.1 --port 8000 --reload
+```
+
+阶段四新增接口：
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| `POST` | `/api/v1/catalog/search` | 结构化 + 可选 RAG 商品搜索 |
+| `POST` | `/api/v1/retrieval/search` | 返回 RAG 候选、分数、来源 |
+| `GET` | `/api/v1/users/{user_id}/profile` | 读取/构建持久画像 |
+| `POST` | `/api/v1/users/{user_id}/behaviors` | 写入行为事件 |
+
+离线默认模式不写数据库；`USE_REAL_ADAPTERS=true` 时使用
+`data/agentic_commerce.db`（或 `DATABASE_URL`），并在数据库为空时按
+`SEED_DEMO_DATA` 写入演示数据。
 
 ## 阶段三架构
 
@@ -94,7 +135,7 @@ initialize_request
 1. 接收统一的 `RecommendationRequest`。
 2. 创建带 request ID 的初始 `RecommendationWorkflowState`。
 3. 用注入的五个 Agent 构建节点和 LangGraph。
-4. 执行 `graph.ainvoke()`。
+4. 使用 `graph.astream(..., stream_mode="values")` 执行并保留最近成功快照。
 5. 捕获图级未知异常，写入安全失败状态。
 6. 聚合最终状态并转换为 `WorkflowRecommendationResponse`。
 
@@ -309,9 +350,12 @@ curl -X POST http://127.0.0.1:8000/api/v1/workflow/recommend \
   "warnings": [],
   "total_latency_ms": 10.5,
   "data_source": "in_memory_demo",
+  "retrieval_source": "in_memory_demo",
+  "embedding_provider": "deterministic",
+  "memory_source": null,
   "llm_provider": "mock",
   "messages": [
-    "阶段三工作流使用 phase-2 in-memory demo data 与 MockLLMProvider，结果不是真实线上推荐。"
+    "结果使用配置的数据适配器与 MockLLMProvider；不是真实线上推荐。"
   ]
 }
 ```
@@ -333,19 +377,22 @@ curl -X POST http://127.0.0.1:8000/api/v1/workflow/recommend \
 | `InMemoryInventoryRepository` | 固定演示库存 |
 | `InMemoryUserBehaviorRepository` | 固定演示用户行为 |
 | `infrastructure/data/demo_data.py` | 集中 phase-2 in-memory demo data |
+| `infrastructure/database/` | SQLAlchemy 表、Repository、种子和迁移入口 |
+| `infrastructure/cache/` | Redis/InMemory 记忆适配器 |
+| `infrastructure/vector_store/` | 确定性 Embedding 和本地向量索引 |
 
-数据不是真实商品、库存或客户数据。工作流响应显式返回
-`data_source=in_memory_demo`、`llm_provider=mock` 和 demo 说明。
+默认离线模式返回 `data_source=in_memory_demo`；`USE_REAL_ADAPTERS=true` 时返回
+`data_source=database`。RAG 和画像来源分别通过 `retrieval_source`、`memory_source`
+和 `profile_source` 显式暴露。
 
 ## 当前未实现
 
-- Checkpoint 持久化、多轮会话记忆、HITL。
-- 真实数据库、Redis、向量数据库、Kafka、Prometheus。
-- Embedding、RAG、协同过滤。
 - 真实 LLM API 和完整 Prompt 管理。
-- 真实订单、支付、WMS。
-- 真实广告法审查、生产级推荐质量评估。
-- 鉴权、限流、生产部署和前端。
+- 真实 Redis/PostgreSQL/MySQL 服务的集成测试与集群部署。
+- 生产级向量数据库、语义 Embedding 模型和检索质量评估。
+- HITL、Checkpoint 持久化、多轮完整对话管理。
+- Prometheus/OpenTelemetry 平台、Kafka、真实订单/支付/WMS。
+- 真实广告法审查、鉴权、限流、生产部署和前端。
 
 ## 目录结构
 
@@ -425,13 +472,20 @@ agentic-commerce-platform/
 │   │   ├── test_workflow_failures.py
 │   │   ├── test_workflow_observability.py
 │   │   └── test_phase2_agent_flow.py
-│   └── regression/
-│       └── test_phase1_phase2_compatibility.py
+│   ├── regression/
+│   │   ├── test_phase1_phase2_compatibility.py
+│   │   └── test_phase3_compatibility_after_phase4.py
+│   └── phase4_helpers.py
+├── migrations/
+│   ├── env.py
+│   └── versions/0001_phase4_initial.py
 └── docs/
     ├── architecture.md
     ├── phase-1-acceptance.md
     ├── phase-2-architecture.md
-    └── phase-3-architecture.md
+    ├── phase-3-architecture.md
+    ├── phase-4-architecture.md
+    └── phase-4-acceptance.md
 ```
 
 ## 安装
@@ -508,16 +562,17 @@ tests/regression/test_phase1_phase2_compatibility.py
 - 各 Agent 失败、输出校验失败、未知图异常。
 - 用户画像影响排序、显式状态数据流、库存过滤、文案对应。
 - 工作流 API 成功、422、失败响应、无网络。
-- 阶段一/二回归。
+- 阶段一/二/三回归。
+- 阶段四数据库、记忆、Embedding、RAG、画像持久化、API 和迁移测试。
 
 当前实际结果：
 
 ```text
-203 passed, 1 warning in 2.91s
+237 passed, 1 warning
 ```
 
 唯一 warning 是第三方 FastAPI/Starlette TestClient 对 httpx 的弃用提示，不是项目
-测试失败。阶段一/二原有 149 个测试继续通过；阶段三新增 54 个测试。
+测试失败。阶段四测试全部离线，不要求 Redis/PostgreSQL/外部向量库。
 
 ## 设计决策
 
@@ -528,16 +583,15 @@ tests/regression/test_phase1_phase2_compatibility.py
 - 失败而不是空列表：错误写入 errors/warnings 和 agent_results，不能静默降级。
 - 库存失败绝不默认有货。
 - 营销文案只接受最终可售商品，响应再次校验。
-- 不提前实现 Checkpoint、Redis、数据库、RAG、真实 LLM。
+- 相似度只作为 RAG 召回和规则排序的辅助信号，不替代 RecommendationAgent。
+- Redis 故障显式降级并记录警告，不伪造缓存写入成功。
+- 默认测试离线；真实 SQLite 使用隔离临时数据库。
 
 ## 后续阶段规划
 
-1. **阶段四：Checkpoint 与真实数据适配器**：LangGraph checkpointer、数据库/Redis、
-   仓储替换、幂等执行。
-2. **阶段五：RAG 与真实检索**：Embedding、向量库、检索端口和评估。
-3. **阶段六：HITL 与运营能力**：人工审批、可中断工作流、真实营销合规。
-4. **阶段七：可观测性与评估**：OpenTelemetry、Prometheus、执行轨迹、自动评估。
-5. **阶段八：生产部署**：鉴权、限流、部署、分布式调度。
+1. **阶段五：HITL 与运营能力**：人工审批、可中断工作流、真实营销合规。
+2. **阶段六：可观测性与评估**：OpenTelemetry、Prometheus、执行轨迹、自动评估。
+3. **阶段七：生产部署**：鉴权、限流、异步数据库、Redis/向量集群和分布式调度。
 
 ## 设计文档
 
@@ -545,3 +599,5 @@ tests/regression/test_phase1_phase2_compatibility.py
 - [阶段一验收记录](docs/phase-1-acceptance.md)
 - [阶段二架构说明](docs/phase-2-architecture.md)
 - [阶段三架构说明](docs/phase-3-architecture.md)
+- [阶段四架构说明](docs/phase-4-architecture.md)
+- [阶段四验收记录](docs/phase-4-acceptance.md)

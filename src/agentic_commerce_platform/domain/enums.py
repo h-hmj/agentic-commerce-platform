@@ -3,6 +3,7 @@
 from enum import StrEnum
 
 __all__ = [
+    "BehaviorType",
     "DataSource",
     "MarketingProvider",
     "MarketingStyle",
@@ -11,6 +12,7 @@ __all__ = [
     "RecommendationScene",
     "RecommendationStatus",
     "RecommendationStrategy",
+    "RetrievalSource",
     "UserSegment",
     "WorkflowStatus",
 ]
@@ -70,9 +72,22 @@ class ProfileSource(StrEnum):
 
 
 class DataSource(StrEnum):
-    """Explicit provenance for phase-two demonstration data."""
+    """Explicit provenance for data returned by a repository."""
 
     IN_MEMORY_DEMO = "in_memory_demo"
+    IN_MEMORY = "in_memory"
+    DATABASE = "database"
+    REDIS = "redis"
+    HYBRID = "hybrid"
+    DEFAULT = "default"
+
+
+class BehaviorType(StrEnum):
+    """Supported user behavior event types."""
+
+    VIEW = "view"
+    CLICK = "click"
+    PURCHASE = "purchase"
 
 
 class RecommendationStrategy(StrEnum):
@@ -88,7 +103,17 @@ class RecommendationReasonCode(StrEnum):
     WITHIN_PRICE_RANGE = "within_price_range"
     IN_STOCK = "in_stock"
     TAG_MATCH = "tag_match"
+    SEMANTIC_MATCH = "semantic_match"
     DIVERSITY_BONUS = "diversity_bonus"
+
+
+class RetrievalSource(StrEnum):
+    """Provenance of a retrieval candidate."""
+
+    VECTOR = "vector"
+    DATABASE_KEYWORD = "database_keyword"
+    IN_MEMORY = "in_memory"
+    FALLBACK = "fallback"
 
 
 class MarketingStyle(StrEnum):

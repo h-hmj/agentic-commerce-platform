@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
@@ -13,10 +14,15 @@ from agentic_commerce_platform.domain.agent_models import (
     UserProfileInput,
     UserProfileOutput,
 )
-from agentic_commerce_platform.domain.enums import ProfileSource, UserSegment
+from agentic_commerce_platform.domain.data_models import BehaviorEvent, PersistedUserProfile
+from agentic_commerce_platform.domain.enums import BehaviorType, ProfileSource, UserSegment
 from agentic_commerce_platform.domain.errors import ExternalServiceError
 from agentic_commerce_platform.domain.models import AgentResult
-from agentic_commerce_platform.domain.ports import UserBehaviorRepository
+from agentic_commerce_platform.domain.ports import (
+    MemoryStore,
+    UserBehaviorRepository,
+    UserProfileRepository,
+)
 from agentic_commerce_platform.infrastructure.llm.base import LLMProvider
 
 __all__ = ["UserProfileAgent"]
@@ -38,19 +44,28 @@ class UserProfileAgent(BaseAgent):
         behavior_repository: UserBehaviorRepository,
         llm_provider: LLMProvider,
         *,
+        profile_repository: UserProfileRepository | None = None,
+        memory_store: MemoryStore | None = None,
+        cache_ttl_seconds: int = 300,
         name: str = "user_profile_agent",
         timeout_seconds: float = 5.0,
     ) -> None:
         """Initialize the agent with injected dependencies.
 
         Args:
-            behavior_repository: Read-only behavior data source.
+            behavior_repository: Read-only historical behavior data source.
             llm_provider: Explanation provider; never a source of profile facts.
+            profile_repository: Optional long-term profile persistence.
+            memory_store: Optional Redis/in-memory short-term behavior and cache.
+            cache_ttl_seconds: TTL for profile caching.
             name: Stable agent name used in logs and results.
             timeout_seconds: Per-attempt timeout.
         """
         self._behavior_repository = behavior_repository
         self._llm_provider = llm_provider
+        self._profile_repository = profile_repository
+        self._memory_store = memory_store
+        self._cache_ttl_seconds = cache_ttl_seconds
         super().__init__(name=name, timeout_seconds=timeout_seconds)
 
     async def execute(self, **kwargs: Any) -> AgentResult:
@@ -59,11 +74,86 @@ class UserProfileAgent(BaseAgent):
         if not isinstance(request, UserProfileInput):
             raise ValueError("UserProfileAgent requires a UserProfileInput via 'request'")
 
-        stored = self._behavior_repository.get_behavior(request.user_id)
-        if stored is not None and stored.user_id != request.user_id:
-            raise ValueError("behavior repository returned a record for a different user")
+        warnings: list[str] = []
+        memory_source: str | None = None
+        data_source = self._behavior_repository.source
+        behavior: UserBehaviorRecord | None = None
 
-        behavior = self._merge_behavior(stored, request)
+        if self._has_explicit_behavior(request):
+            behavior = self._behavior_from_request(request)
+        else:
+            if self._memory_store is not None:
+                try:
+                    events = await self._memory_store.get_recent_behaviors(
+                        request.user_id,
+                        limit=100,
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        "profile_memory_read_failed: %s",
+                        exc,
+                        extra={"agent_name": self.name},
+                        exc_info=True,
+                    )
+                    warnings.append("memory_read_failed")
+                else:
+                    if events:
+                        behavior = self._events_to_behavior(request.user_id, events)
+                        data_source = self._memory_store.source
+                        memory_source = self._memory_store.source.value
+
+            if behavior is None and self._memory_store is not None:
+                try:
+                    cached = await self._memory_store.get_cached_profile(request.user_id)
+                except Exception as exc:
+                    logger.warning(
+                        "profile_cache_read_failed: %s",
+                        exc,
+                        extra={"agent_name": self.name},
+                        exc_info=True,
+                    )
+                    warnings.append("profile_cache_read_failed")
+                else:
+                    if cached is not None:
+                        return AgentResult(
+                            agent_name=self.name,
+                            success=True,
+                            confidence=cached.confidence,
+                            data=cached.model_copy(
+                                update={
+                                    "memory_source": self._memory_store.source.value
+                                }
+                            ).model_dump(mode="json"),
+                        )
+
+            if behavior is None:
+                stored = self._behavior_repository.get_behavior(request.user_id)
+                if stored is not None and stored.user_id != request.user_id:
+                    raise ValueError(
+                        "behavior repository returned a record for a different user"
+                    )
+                if stored is not None:
+                    behavior = self._merge_behavior(stored, request)
+                    data_source = self._behavior_repository.source
+
+            if behavior is None and self._profile_repository is not None:
+                try:
+                    persisted = self._profile_repository.get_profile(request.user_id)
+                except Exception as exc:
+                    logger.warning(
+                        "profile_persistence_read_failed: %s",
+                        exc,
+                        extra={"agent_name": self.name},
+                        exc_info=True,
+                    )
+                    warnings.append("profile_persistence_read_failed")
+                else:
+                    if persisted is not None:
+                        return self._persisted_result(persisted)
+
+            if behavior is None:
+                behavior = UserBehaviorRecord(user_id=request.user_id)
+
         segments = self._infer_segments(behavior)
         preferred_categories = self._preferred_categories(behavior)
         price_range = self._infer_price_range(behavior)
@@ -72,7 +162,6 @@ class UserProfileAgent(BaseAgent):
 
         source = ProfileSource.RULE_BASED
         explanation: str | None = None
-        warnings: list[str] = []
         prompt = (
             "请解释以下规则画像，不得新增用户事实。"
             f"分群={','.join(segment.value for segment in segments)}；"
@@ -83,10 +172,10 @@ class UserProfileAgent(BaseAgent):
             explanation = await self._llm_provider.generate(
                 prompt,
                 system_prompt=(
-                    "你是阶段二画像解释助手。结构化画像由规则生成，"
+                    "你是阶段四画像解释助手。结构化画像由规则生成，"
                     "你只能解释，不得补充未提供的用户事实。"
                 ),
-                metadata={"phase": "phase-2", "agent": self.name, "mock": True},
+                metadata={"phase": "phase-4", "agent": self.name, "mock": True},
             )
             source = ProfileSource.RULE_BASED_AND_MOCK_LLM
         except ExternalServiceError as exc:
@@ -97,6 +186,7 @@ class UserProfileAgent(BaseAgent):
             )
             warnings.append("mock_llm_unavailable")
 
+        profile_persisted = False
         output = UserProfileOutput(
             user_id=request.user_id,
             segments=segments,
@@ -105,15 +195,138 @@ class UserProfileAgent(BaseAgent):
             recent_interests=recent_interests,
             confidence=confidence,
             profile_source=source,
-            data_source=self._behavior_repository.source,
+            data_source=data_source,
+            memory_source=memory_source,
+            profile_persisted=False,
             explanation=explanation,
             warnings=warnings,
         )
+
+        if self._profile_repository is not None:
+            try:
+                self._profile_repository.save_profile(output)
+            except Exception as exc:
+                logger.warning(
+                    "profile_persistence_failed: %s",
+                    exc,
+                    extra={"agent_name": self.name},
+                    exc_info=True,
+                )
+                warnings.append("profile_persistence_failed")
+            else:
+                profile_persisted = True
+
+        final_output = output.model_copy(
+            update={
+                "profile_persisted": profile_persisted,
+                "warnings": list(dict.fromkeys(warnings)),
+            }
+        )
+        if self._memory_store is not None:
+            try:
+                await self._memory_store.cache_profile(
+                    final_output,
+                    ttl_seconds=self._cache_ttl_seconds,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "profile_cache_write_failed: %s",
+                    exc,
+                    extra={"agent_name": self.name},
+                    exc_info=True,
+                )
+                final_output = final_output.model_copy(
+                    update={
+                        "warnings": [
+                            *final_output.warnings,
+                            "profile_cache_write_failed",
+                        ]
+                    }
+                )
+
         return AgentResult(
             agent_name=self.name,
             success=True,
-            confidence=output.confidence,
-            data=output.model_dump(mode="json"),
+            confidence=final_output.confidence,
+            data=final_output.model_dump(mode="json"),
+        )
+
+    def _persisted_result(self, persisted: PersistedUserProfile) -> AgentResult:
+        """Return a stored profile without inventing new facts or re-explaining it."""
+        return AgentResult(
+            agent_name=self.name,
+            success=True,
+            confidence=persisted.profile.confidence,
+            data=persisted.profile.model_copy(
+                update={"profile_persisted": True}
+            ).model_dump(mode="json"),
+        )
+
+    @staticmethod
+    def _has_explicit_behavior(request: UserProfileInput) -> bool:
+        """Return whether the caller supplied behavior beyond the user ID."""
+        return bool(
+            request.recent_views
+            or request.recent_clicks
+            or request.recent_purchases
+            or request.category_counts
+            or request.average_order_value is not None
+            or request.days_since_last_active is not None
+            or request.account_age_days is not None
+        )
+
+    @staticmethod
+    def _behavior_from_request(request: UserProfileInput) -> UserBehaviorRecord:
+        """Convert explicit input fields into a behavior value object."""
+        return UserBehaviorRecord(
+            user_id=request.user_id,
+            recent_views=request.recent_views,
+            recent_clicks=request.recent_clicks,
+            recent_purchases=request.recent_purchases,
+            category_counts=request.category_counts,
+            average_order_value=request.average_order_value,
+            days_since_last_active=request.days_since_last_active,
+            account_age_days=request.account_age_days,
+        )
+
+    @staticmethod
+    def _events_to_behavior(
+        user_id: str,
+        events: list[BehaviorEvent],
+    ) -> UserBehaviorRecord:
+        """Summarize bounded real-time events into rule inputs."""
+        views: list[str] = []
+        clicks: list[str] = []
+        purchases: list[str] = []
+        amounts: list[Decimal] = []
+        categories: dict[str, int] = {}
+        for event in events:
+            if event.item_id:
+                if event.behavior_type is BehaviorType.VIEW:
+                    views.append(event.item_id)
+                elif event.behavior_type is BehaviorType.CLICK:
+                    clicks.append(event.item_id)
+                else:
+                    purchases.append(event.item_id)
+                    if event.amount is not None:
+                        amounts.append(event.amount)
+            if event.category:
+                categories[event.category] = categories.get(event.category, 0) + 1
+        latest = max((event.occurred_at for event in events), default=None)
+        days_since_active = (
+            max(0, (datetime.now(UTC) - latest).days) if latest is not None else None
+        )
+        return UserBehaviorRecord(
+            user_id=user_id,
+            recent_views=list(dict.fromkeys(views))[:100],
+            recent_clicks=list(dict.fromkeys(clicks))[:100],
+            recent_purchases=list(dict.fromkeys(purchases))[:100],
+            category_counts=categories,
+            average_order_value=(
+                sum(amounts, Decimal("0")) / len(amounts) if amounts else None
+            ),
+            days_since_last_active=days_since_active,
+            account_age_days=None,
         )
 
     @staticmethod

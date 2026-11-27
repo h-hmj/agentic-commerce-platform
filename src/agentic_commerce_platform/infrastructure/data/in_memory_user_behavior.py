@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import datetime
 
 from agentic_commerce_platform.domain.agent_models import UserBehaviorRecord
+from agentic_commerce_platform.domain.data_models import BehaviorEvent
 from agentic_commerce_platform.domain.enums import DataSource
 from agentic_commerce_platform.infrastructure.data.demo_data import DEMO_BEHAVIORS
 
@@ -34,6 +36,7 @@ class InMemoryUserBehaviorRepository:
                 raise ValueError(f"duplicate user behavior record: {record.user_id!r}")
             indexed[record.user_id] = record.model_copy(deep=True)
         self._records = indexed
+        self._events: list[BehaviorEvent] = []
 
     @property
     def source(self) -> DataSource:
@@ -44,3 +47,28 @@ class InMemoryUserBehaviorRepository:
         """Return a copy of a user's behavior, or ``None`` for unknown users."""
         record = self._records.get(user_id)
         return record.model_copy(deep=True) if record is not None else None
+
+    def get_recent_behaviors(
+        self,
+        user_id: str,
+        *,
+        behavior_type: str | None = None,
+        since: datetime | None = None,
+        limit: int = 50,
+    ) -> list[BehaviorEvent]:
+        """Return recent events from this process-local event buffer."""
+        events = [
+            event
+            for event in self._events
+            if event.user_id == user_id
+            and (behavior_type is None or event.behavior_type.value == behavior_type)
+            and (since is None or event.occurred_at >= since)
+        ]
+        events.sort(key=lambda event: event.occurred_at, reverse=True)
+        return [event.model_copy(deep=True) for event in events[:limit]]
+
+    def record_behavior(self, event: BehaviorEvent) -> BehaviorEvent:
+        """Append one behavior event to the process-local buffer."""
+        stored = event.model_copy(deep=True)
+        self._events.append(stored)
+        return stored.model_copy(deep=True)

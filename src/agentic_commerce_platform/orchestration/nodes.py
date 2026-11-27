@@ -172,11 +172,16 @@ class WorkflowNodes:
                 agent_results={result.agent_name: result},
             )
             if failure or output is None:
-                updates["user_profile"] = self._default_profile(state["user_id"])
+                fallback_profile = self._default_profile(state["user_id"])
+                updates["user_profile"] = fallback_profile
+                updates["profile_source"] = fallback_profile.profile_source.value
+                updates["memory_source"] = fallback_profile.memory_source
                 updates["errors"] = [self._failure_code("user_profile", failure)]
                 updates["warnings"] = ["user_profile_fallback_default"]
             else:
                 updates["user_profile"] = output
+                updates["profile_source"] = output.profile_source.value
+                updates["memory_source"] = output.memory_source
                 if output.warnings:
                     updates["warnings"] = [
                         f"user_profile_{warning}" for warning in output.warnings
@@ -215,8 +220,20 @@ class WorkflowNodes:
                 updates["failed_stage"] = "catalog"
             else:
                 updates["candidate_products"] = output.products
+                updates["retrieval_sources"] = {
+                    product.product_id: output.retrieval_source or output.source.value
+                    for product in output.products
+                }
+                updates["retrieval_scores"] = dict(output.retrieval_scores)
+                if output.warnings:
+                    updates["warnings"] = [
+                        f"catalog_{warning}" for warning in output.warnings
+                    ]
                 if not output.products:
-                    updates["warnings"] = ["catalog_returned_no_products"]
+                    updates["warnings"] = [
+                        *updates.get("warnings", []),
+                        "catalog_returned_no_products",
+                    ]
             return updates
 
     async def recommendation_node(
@@ -254,6 +271,7 @@ class WorkflowNodes:
                 user_profile=profile,
                 candidate_products=candidates,
                 num_items=state.get("num_items", 5),
+                retrieval_scores=state.get("retrieval_scores", {}),
             )
             updates["recommendation_input"] = request
             result, output, failure = await self._invoke_agent(

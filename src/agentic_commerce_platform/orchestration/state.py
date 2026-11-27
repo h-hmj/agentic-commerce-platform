@@ -88,6 +88,13 @@ class RecommendationWorkflowState(TypedDict, total=False):
     marketing_input: MarketingInput | None
     marketing_copies: list[MarketingCopy]
 
+    # Phase-four provenance and retrieval context.
+    retrieval_sources: dict[str, str]
+    retrieval_scores: dict[str, float]
+    profile_source: str | None
+    memory_source: str | None
+    data_source: str
+
     # Results and observable lifecycle.
     agent_results: Annotated[dict[str, AgentResult], merge_agent_results]
     errors: Annotated[list[str], merge_unique_strings]
@@ -123,4 +130,9 @@ def build_initial_workflow_state(
         scene=request.scene.value,
         num_items=request.num_items,
         context=request.context,
+        retrieval_sources={},
+        retrieval_scores={},
+        profile_source=None,
+        memory_source=None,
+        data_source="in_memory_demo",
     )

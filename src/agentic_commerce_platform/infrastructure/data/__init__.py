@@ -15,6 +15,9 @@ from agentic_commerce_platform.infrastructure.data.in_memory_inventory import (
 from agentic_commerce_platform.infrastructure.data.in_memory_user_behavior import (
     InMemoryUserBehaviorRepository,
 )
+from agentic_commerce_platform.infrastructure.data.in_memory_user_profile import (
+    InMemoryUserProfileRepository,
+)
 
 __all__ = [
     "DEMO_BEHAVIORS",
@@ -24,4 +27,5 @@ __all__ = [
     "InMemoryCatalogRepository",
     "InMemoryInventoryRepository",
     "InMemoryUserBehaviorRepository",
+    "InMemoryUserProfileRepository",
 ]

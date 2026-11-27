@@ -147,6 +147,7 @@ class SupervisorOrchestrator:
             request_id.strip() if request_id and request_id.strip() else uuid4().hex
         )
         initial_state = build_initial_workflow_state(request, effective_request_id)
+        initial_state["data_source"] = self._settings_data_source()
         started_at = time.perf_counter()
 
         with request_log_context(effective_request_id):
@@ -184,6 +185,7 @@ class SupervisorOrchestrator:
                     effective_request_id,
                     started_at,
                     previous_state=last_state,
+                    data_source=self._settings_data_source(),
                 )
             final_status = _status_value(final_state.get("workflow_status"))
             final_count = len(final_state.get("available_products", []))
@@ -229,9 +231,20 @@ class SupervisorOrchestrator:
             WorkflowStatus.RUNNING: RecommendationStatus.FAILED,
         }[workflow_status]
         messages = [
-            "阶段三工作流使用 phase-2 in-memory demo data 与 MockLLMProvider，"
-            "结果不是真实线上推荐。"
+            "结果使用配置的数据适配器与 MockLLMProvider；不是真实线上推荐。"
         ]
+        sources = sorted(
+            {
+                source
+                for source in state.get("retrieval_sources", {}).values()
+                if source
+            }
+        )
+        data_source = (
+            DataSource.DATABASE
+            if self._settings.use_real_adapters
+            else DataSource.IN_MEMORY_DEMO
+        )
         return WorkflowRecommendationResponse(
             request_id=state["request_id"],
             user_id=state["user_id"],
@@ -245,18 +258,26 @@ class SupervisorOrchestrator:
             errors=state.get("errors", []),
             warnings=state.get("warnings", []),
             total_latency_ms=state.get("total_latency_ms", 0.0),
-            data_source=DataSource.IN_MEMORY_DEMO,
+            data_source=data_source,
+            retrieval_source=",".join(sources) if sources else None,
+            embedding_provider=self._settings.embedding_provider,
+            memory_source=state.get("memory_source"),
             llm_provider=self._settings.llm_provider,
             messages=messages,
         )
 
-    @staticmethod
+    def _settings_data_source(self) -> str:
+        """Return the configured adapter provenance marker."""
+        return "database" if self._settings.use_real_adapters else "in_memory_demo"
+
     def _failed_state(
+        self,
         request: RecommendationRequest,
         request_id: str,
         started_at: float,
         *,
         previous_state: RecommendationWorkflowState | None = None,
+        data_source: str,
     ) -> RecommendationWorkflowState:
         """Preserve the last successful graph snapshot on a graph-level failure."""
         now = datetime.now(UTC).isoformat(timespec="milliseconds")
@@ -284,6 +305,11 @@ class SupervisorOrchestrator:
                 "unavailable_products": preserved.get("unavailable_products", []),
                 "inventory_alerts": preserved.get("inventory_alerts", []),
                 "marketing_copies": preserved.get("marketing_copies", []),
+                "data_source": data_source,
+                "retrieval_sources": preserved.get("retrieval_sources", {}),
+                "retrieval_scores": preserved.get("retrieval_scores", {}),
+                "profile_source": preserved.get("profile_source"),
+                "memory_source": preserved.get("memory_source"),
                 "errors": merge_unique_strings(
                     preserved.get("errors", []),
                     ["workflow_execution_failed"],
