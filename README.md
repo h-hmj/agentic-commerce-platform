@@ -230,11 +230,27 @@ Agent 间没有直接调用，也没有全局通信；数据全部通过 LangGra
 
 ## API
 
-启动：
+启动时请使用当前虚拟环境的 Python，而不是直接调用可能来自全局 PATH 的 `uvicorn`：
 
-```bash
-uvicorn agentic_commerce_platform.api.app:app --host 127.0.0.1 --port 8000 --reload
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn agentic_commerce_platform.api.app:app --host 127.0.0.1 --port 8000 --reload
 ```
+
+激活虚拟环境后也可以：
+
+```powershell
+python -m uvicorn agentic_commerce_platform.api.app:app --host 127.0.0.1 --port 8000 --reload
+```
+
+如果直接运行 `uvicorn` 报：
+
+```text
+ModuleNotFoundError: No module named 'agentic_commerce_platform'
+```
+
+通常说明该命令解析到了全局 Python 的 `uvicorn.exe`。当前项目的 `.venv` 使用
+`--system-site-packages` 时可能没有自己的 `uvicorn.exe`。使用上面的
+`python -m uvicorn` 即可确保使用虚拟环境的解释器和已安装的 editable 包。
 
 文档：<http://127.0.0.1:8000/docs>
 
