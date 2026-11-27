@@ -2,8 +2,8 @@
 
 > 验收日期：2026-11-27（Asia/Shanghai）
 >
-> 结论：阶段四核心能力已实现并通过离线测试。真实 Redis、PostgreSQL/MySQL 和外部
-> 向量数据库没有在本机验证，本文明确列出这些边界。
+> 结论：阶段四核心能力已实现并通过测试。真实 Redis 已在本机实际验证；
+> PostgreSQL/MySQL 和外部向量数据库没有在本机验证，本文明确列出这些边界。
 
 ## 1. 环境
 
@@ -15,8 +15,8 @@
 | LangGraph | 1.2.9 |
 | SQLAlchemy | 2.0.51 |
 | Alembic | 1.18.5 |
-| Redis Python 包 | 未安装 |
-| Redis 服务 | 未运行/未验证 |
+| Redis Python 包 | 6.4.0（已安装到 `.venv`） |
+| Redis 服务 | Windows 服务 `Redis`/`Redis8` Running，127.0.0.1:6379 可连接 |
 | PostgreSQL/MySQL | 未验证 |
 | 外部向量数据库 | 未使用 |
 | LLM | 仅 `MockLLMProvider` |
@@ -32,11 +32,24 @@
 实际输出：
 
 ```text
-237 passed, 1 warning in 4.89s
+237 passed, 1 skipped, 1 warning in 4.66s
 ```
 
 唯一 warning 是第三方 FastAPI/Starlette TestClient 对 httpx 的弃用提示，不是项目
-测试失败。
+测试失败。跳过的 1 个测试是可选真实 Redis 集成测试。
+
+### 真实 Redis 集成测试
+
+```powershell
+$env:RUN_REDIS_INTEGRATION = "1"
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+实际输出：
+
+```text
+238 passed, 1 warning in 9.86s
+```
 
 ### Lint
 
@@ -117,6 +130,7 @@ products, user_behaviors, user_profiles, users
   - Redis 假客户端：key 前缀、TTL、JSON 往返、关闭。
   - Redis 操作失败抛出结构化 `ExternalServiceError`。
   - Redis 包缺失时显式回退 InMemory。
+  - 可选真实 Redis 集成测试：真实行为/画像/session 写入、读取、key 前缀和 TTL。
   - 确定性 Embedding 稳定性和 batch。
   - InMemory/SQLite 向量索引与检索。
 - `tests/unit/test_retrieval_service.py`
@@ -178,8 +192,16 @@ SEED_DEMO_DATA=true
   结构化 `503`，不伪造成功。
 - Redis 客户端关闭失败：记录警告，不影响响应。
 
-**未验证**：真实 Redis 连接、真实 TTL 到期、Redis 重启恢复。Redis 适配器测试使用
-假客户端；本机没有 Redis 服务和 Python 客户端。
+**已实际验证**：
+
+- Windows Redis 服务 `Redis`/`Redis8` 正在运行，6379 端口可连接。
+- 原始 RESP `PING` 返回 `+PONG`。
+- Python `redis` 6.4.0 可用。
+- `RedisMemoryStore` 写入行为、画像和 session，key 前缀正确。
+- 真实读取往返成功，行为/画像/session 的 TTL 为正。
+- 测试结束后按唯一前缀清理测试 key。
+
+**仍未验证**：Redis 集群、主从切换、重启恢复、网络分区、故障注入和连接池压测。
 
 ### PostgreSQL/MySQL
 
@@ -197,12 +219,12 @@ SEED_DEMO_DATA=true
 3. `MockLLMProvider` 测试导入路径使用错误模块名。
    - 修复：改为 `infrastructure.llm.mock_provider`。
 
-最终全量测试 237 passed，无项目功能失败。
+最终全量测试 237 passed、1 skipped；启用真实 Redis 后 238 passed，无项目功能失败。
 
 ## 7. 明确未完成/未验证
 
 - 真实 LLM；仍为 Mock。
-- 真实 Redis 服务集成、连接池、集群、监控。
+- Redis 集群、主从切换、重启恢复、故障注入、连接池压测和监控。
 - 真实 PostgreSQL/MySQL 连接和迁移。
 - 外部 Qdrant/Chroma 向量数据库；当前是进程内/SQLite 余弦检索。
 - 语义 Embedding 模型；当前为确定性哈希向量。
@@ -218,7 +240,7 @@ SEED_DEMO_DATA=true
 
 1. 将数据库 Repository 迁移为异步 SQLAlchemy 或独立数据服务。
 2. 商品规模增大时接入 Qdrant/Chroma/pgvector，并保留当前端口。
-3. 增加真实 Redis 集成测试（Testcontainers 或 CI 服务）。
+3. 增加 Redis 集群/故障恢复测试（Testcontainers 或 CI 服务）。
 4. 对 PostgreSQL/MySQL 增加迁移、时区和并发测试。
 5. 增加画像/检索质量评估集，而非只测结构正确性。
 6. 评估 RAG 缓存、索引增量更新和失效策略。
@@ -229,4 +251,5 @@ SEED_DEMO_DATA=true
 
 阶段四实现了可在本地离线验证的 SQLite 持久化、记忆优先级、画像持久化、确定性
 Embedding/RAG、真实数据工作流和来源追踪。没有把内存适配器冒充数据库、没有把哈希
-向量冒充语义模型、也没有把假 Redis 客户端测试冒充真实 Redis 验证。
+向量冒充语义模型。Redis 既通过假客户端测试错误路径，也在本机真实 Redis 服务上
+验证了读写、key 前缀和 TTL。

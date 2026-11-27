@@ -19,8 +19,9 @@
 > - 当前只使用离线 `MockLLMProvider`，没有真实 LLM 调用。
 > - `POST /api/v1/recommend` 仍保留阶段一 skeleton 行为，用于兼容。
 > - 阶段三工作流接口是 `POST /api/v1/workflow/recommend`。
-> - Redis 适配器已实现，但本机没有可用 Redis 服务；离线测试使用假客户端和
->   `InMemoryMemoryStore`。Redis 不可用时显式降级，不伪造写入成功。
+> - Redis 适配器已在本机真实 Redis 服务上验证（PING、key 前缀、TTL、行为/画像/
+>   session 往返）。默认测试不依赖 Redis；真实集成测试通过
+>   `RUN_REDIS_INTEGRATION=1` 显式开启。Redis 不可用时显式降级，不伪造写入成功。
 > - 本地 RAG 使用确定性哈希 Embedding 和进程内/SQLite 向量索引，不是生产语义检索。
 > - 没有真实支付/订单/WMS、Human-in-the-loop、完整 Agent 评估平台或分布式部署。
 > - MarketingAgent 只做基础敏感词检查，不声称完成完整广告法审查。
@@ -388,7 +389,7 @@ curl -X POST http://127.0.0.1:8000/api/v1/workflow/recommend \
 ## 当前未实现
 
 - 真实 LLM API 和完整 Prompt 管理。
-- 真实 Redis/PostgreSQL/MySQL 服务的集成测试与集群部署。
+- Redis 集群/故障注入、PostgreSQL/MySQL 服务的集成测试与集群部署。
 - 生产级向量数据库、语义 Embedding 模型和检索质量评估。
 - HITL、Checkpoint 持久化、多轮完整对话管理。
 - Prometheus/OpenTelemetry 平台、Kafka、真实订单/支付/WMS。
@@ -568,11 +569,21 @@ tests/regression/test_phase1_phase2_compatibility.py
 当前实际结果：
 
 ```text
-237 passed, 1 warning
+237 passed, 1 skipped, 1 warning
 ```
 
 唯一 warning 是第三方 FastAPI/Starlette TestClient 对 httpx 的弃用提示，不是项目
-测试失败。阶段四测试全部离线，不要求 Redis/PostgreSQL/外部向量库。
+测试失败。被跳过的 1 个测试是可选真实 Redis 集成测试。
+
+本机已实际验证真实 Redis：
+
+```powershell
+$env:RUN_REDIS_INTEGRATION = "1"
+.\.venv\Scripts\python.exe -m pytest -q
+# 238 passed, 1 warning
+```
+
+默认套件不要求 Redis/PostgreSQL/外部向量库。
 
 ## 设计决策
 

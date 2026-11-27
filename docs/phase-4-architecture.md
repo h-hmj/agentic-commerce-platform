@@ -18,7 +18,7 @@
 - 生产级分布式数据库、Redis 集群、向量数据库集群。
 - Human-in-the-loop、完整 Agent 评估平台、Prometheus/OpenTelemetry 平台。
 - 真实支付、订单、WMS、推荐模型训练。
-- 对 Redis 真实服务的自动化测试。
+- Redis 集群、故障注入和重启恢复测试。
 
 ## 2. 架构
 
@@ -179,8 +179,11 @@ Catalog 投影为 0，InventoryAgent 仍会把缺失记录视为不可售，不�
 - `agentic-commerce:session:{session_id}`
 
 行为列表裁剪到最近 200 条；行为、画像、会话均设置有限 TTL。库不存在或客户端
-初始化失败时，应用记录警告并使用 `InMemoryMemoryStore`。真实 Redis 服务未在本机
-验证，见验收文档。
+初始化失败时，应用记录警告并使用 `InMemoryMemoryStore`。
+
+本机真实 Redis 已实际验证：原始 RESP `PING` 返回 `+PONG`；`RedisMemoryStore`
+写入行为、画像和 session，key 前缀正确，读取往返成功，TTL 为正；随后删除测试 key。
+真实集成测试通过 `RUN_REDIS_INTEGRATION=1` 显式开启。
 
 ## 7. RAG 与本地向量检索
 
@@ -277,12 +280,13 @@ python -m alembic upgrade head
 - 确定性 Embedding、进程内向量、SQLite 向量存储测试。
 - RAG 成功、过滤、向量故障回退、Embedding 故障回退测试。
 - InMemory 记忆、缓存 TTL、会话、Redis 适配器假客户端、Redis 故障降级测试。
+- 可选真实 Redis 集成测试（行为/画像/session、key 前缀、TTL）。
 - 画像优先级、缓存、数据库恢复测试。
 - 真实 SQLite API 端到端测试、工作流来源字段测试。
 - Alembic 迁移测试。
 - 阶段一/二/三兼容性回归测试。
 
-未测试真实 Redis 服务、真实 PostgreSQL/MySQL、外部 Qdrant/Chroma 服务。
+真实 Redis 已测试；真实 PostgreSQL/MySQL、外部 Qdrant/Chroma 服务未测试。
 
 ## 12. 已知技术债与边界
 
@@ -290,7 +294,7 @@ python -m alembic upgrade head
   规模可接受，生产应改为异步 SQLAlchemy/连接池或独立数据服务。
 - 向量相似度在 Python 中计算；商品规模变大后需要真正的向量索引。
 - 确定性 Embedding 不是语义模型，检索质量只适合联调和演示。
-- Redis 没有真实服务集成测试；Redis 适配器通过假客户端验证键前缀、TTL 和错误传播。
+- Redis 真实服务已验证基础读写/TTL，但未验证集群、主从切换、重启恢复和故障注入。
 - 没有 HITL、评估平台、分布式追踪平台、Checkpoint 持久化。
 - Docker Compose 未提供；本地直接运行 SQLite 和 InMemory/RAG 即可。
 - 种子数据是演示数据，不能当作生产数据。
